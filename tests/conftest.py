@@ -1,5 +1,6 @@
 """Shared test fixtures."""
 
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,6 +13,16 @@ from whyline.models import Record
 from whyline.store import RECORDS_DIRNAME, WHYLINE_DIRNAME, RecordStore
 
 MakeRecord = Callable[..., Record]
+
+SPEC_PATH = Path(__file__).resolve().parents[1] / "docs" / "03-schema-cli-hooks.md"
+
+
+def doc_yaml_block(heading: str) -> str:
+    """Return the first ```yaml block after ``heading`` in docs/03-schema-cli-hooks.md."""
+    text = SPEC_PATH.read_text(encoding="utf-8")
+    match = re.search(r"```yaml\n(.*?)```", text[text.index(heading) :], re.DOTALL)
+    assert match, f"no yaml block after {heading!r}"
+    return match.group(1)
 
 
 def uuid7(n: int) -> UUID:

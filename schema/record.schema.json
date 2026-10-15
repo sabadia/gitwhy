@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Author": {
+      "additionalProperties": false,
+      "description": "Who wrote a record. Agents must name their tool; humans must not.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "human",
+            "agent"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Author",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "description": "A test, command, or note offered as evidence. Stored, never re-run.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "test",
+            "command",
+            "note"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Link": {
+      "additionalProperties": false,
+      "description": "A repository-relative path, optionally narrowed to a line range.",
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "start_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Line"
+        },
+        "end_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Line"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "Link",
+      "type": "object"
+    },
+    "Rejected": {
+      "additionalProperties": false,
+      "description": "An alternative that was considered and rejected.",
+      "properties": {
+        "option": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Option",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "option"
+      ],
+      "title": "Rejected",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "description": "How the record was captured.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "prompt",
+            "flags",
+            "session",
+            "import"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Source",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A Whyline intent record, schema version 1.",
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "id": {
+      "format": "uuid7",
+      "title": "Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "affirmed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "created_at": {
+      "description": "RFC3339 timestamp, stored in UTC",
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "updated_at": {
+      "description": "RFC3339 timestamp, stored in UTC",
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "affirmed_at": {
+      "anyOf": [
+        {
+          "description": "RFC3339 timestamp, stored in UTC",
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Affirmed At"
+    },
+    "affirmed_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Affirmed By"
+    },
+    "author": {
+      "$ref": "#/$defs/Author"
+    },
+    "goal": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+    },
+    "constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "rejected": {
+      "items": {
+        "$ref": "#/$defs/Rejected"
+      },
+      "title": "Rejected",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "falsifier": {
+      "title": "Falsifier",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "links": {
+      "items": {
+        "$ref": "#/$defs/Link"
+      },
+      "minItems": 1,
+      "title": "Links",
+      "type": "array"
+    },
+    "adr": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Adr"
+    },
+    "risks": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Risks",
+      "type": "array"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "status",
+    "created_at",
+    "updated_at",
+    "affirmed_at",
+    "affirmed_by",
+    "author",
+    "goal",
+    "constraints",
+    "rejected",
+    "assumptions",
+    "falsifier",
+    "evidence",
+    "links",
+    "risks",
+    "source"
+  ],
+  "title": "Record",
+  "type": "object"
+}
