@@ -146,7 +146,10 @@ def main() -> None:
 
 @app.command()
 def version() -> None:
-    """Print the installed whyline version."""
+    """Print the installed whyline version.
+
+    No flags. Exits 0.
+    """
     typer.echo(__version__)
 
 
@@ -155,7 +158,7 @@ def schema() -> None:
     """Print the JSON Schema for a whyline record (draft 2020-12).
 
     Other tools validate records against this. The same schema is committed as
-    schema/record.schema.json.
+    schema/record.schema.json. No flags. Exits 0.
     """
     typer.echo(render_record_json_schema(), nl=False)
 
@@ -465,6 +468,9 @@ def capture_command(
     falsifier are never taken from session prose: they stay empty unless you pass them. A
     session capture is always a draft, so --session cannot be combined with --affirm.
 
+    The record is written under .whyline/records/ and is not committed. Run `git add .whyline`
+    so the record travels with the commit.
+
     Exits 1 for bad input (no --goal and no terminal, an unreadable session, --session with
     --affirm, nothing staged and no --file, a path outside the repository, a declined
     confirmation), 2 outside a git repository or before `whyline init`,
@@ -572,7 +578,8 @@ def link(
     trailer to your next commit. With --amend-head, adds the trailer to HEAD now, changing
     only its message (staged changes are not included). That is refused when HEAD is already
     on a remote-tracking branch, is detached, or a merge or rebase is in progress, and when
-    HEAD is already linked to a different record.
+    HEAD is already linked to a different record. The pushed check uses this clone's
+    remote-tracking refs only and does not contact the network.
 
     Exits 1 for bad input (malformed id, no commit to amend, HEAD linked elsewhere),
     2 outside an initialized repository, 4 for a corrupt record, 7 when amending would be
@@ -619,7 +626,8 @@ def install_hooks(
 
     prepare-commit-msg: when .whyline/pending holds an id (see `whyline link` and
     `capture --pending`), adds `Whyline-Id: <id>` to the next commit message and clears
-    pending. It never blocks a commit.
+    pending. It never blocks a commit. If you abort that commit, the pending mark is
+    already gone; run `whyline link <id>` again.
 
     pre-commit (opt-in, --check): runs `whyline check` on the staged changes and blocks the
     commit only when a large change has no record, printing the capture command. If whyline
@@ -848,7 +856,11 @@ def _display_path(path: Path, root: Path) -> str:
 
 adapters_app = typer.Typer(
     cls=WhylineGroup,
-    help="Print or install config for a coding agent.",
+    help=(
+        "Print or install config for a coding agent. "
+        "claude --write exits 2 outside a git repo and 4 on unusable JSON. "
+        "claude-stop always exits 0."
+    ),
     no_args_is_help=True,
 )
 app.add_typer(adapters_app, name="adapters")
@@ -900,7 +912,14 @@ def adapters_claude_stop() -> None:
     run_claude_stop()
 
 
-hook_app = typer.Typer(help="Entry points called by installed git hooks.", hidden=True)
+hook_app = typer.Typer(
+    help=(
+        "Entry points called by installed git hooks. "
+        "prepare-commit-msg always exits 0. "
+        "pre-commit exits 3 only when the staged change needs a record, otherwise 0."
+    ),
+    hidden=True,
+)
 app.add_typer(hook_app, name="hook", hidden=True)
 
 
@@ -943,6 +962,9 @@ def why(
     first affirmed record; drafts newer than it are still shown. --all shows everything.
     --json prints {"records": [{"record", "resolved_commits", "via_link"}], ...} with no
     banner text.
+
+    A shallow clone may miss older records, and why says so. With no commits yet, why says
+    there are no commits yet and exits 0.
 
     Nothing found is not an error: it prints that no record explains the line and exits 0.
     Exits 1 for bad input (no FILE:LINE and no --commit, or both), 2 outside an initialized

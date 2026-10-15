@@ -2,9 +2,44 @@
 
 Git-native intent ledger. Capture why a change exists, and get it back when you review, debug, or hand the repo to an agent.
 
-Code is cheap to write. Understanding it is not. The reason for a change dies in a chat or a head, reviewers reverse-engineer a clean diff, and the next session invents a history that was never true. Whyline stores a small structured record next to the code, links it to the commit with a `Whyline-Id` trailer, and returns it at a file and line.
+Code is cheap to write. Understanding it is not.
+The reason for a change dies in a chat or a head.
+Reviewers reverse-engineer a clean diff, and the next session invents a history that was never true.
+Whyline stores a small structured record next to the code, links it to the commit with a `Whyline-Id` trailer, and returns it at a file and line.
 
-**Status:** specification complete, implementation in progress via the project board.
+**Status:** pre-release, MVP in progress.
+
+## Install
+
+Whyline is not on PyPI yet. Install it from git:
+
+```sh
+uv tool install git+https://github.com/sabadia/whyline
+```
+
+After it is published:
+
+```sh
+uv tool install whyline
+```
+
+The optional MCP extra is `uv tool install 'whyline[mcp]'`. Core commands need no account and no API key.
+
+## Quickstart
+
+```sh
+cd your-repo
+whyline init
+whyline install-hooks
+git add src/app.py
+whyline capture --goal "Close invoices once a day."
+whyline link <id>
+git add .whyline
+git commit -m "feat: close invoices once a day"
+whyline why src/app.py:1
+```
+
+`whyline capture --pending` is the same mark as `whyline link <id>`. If you abort the commit after the hook runs, that mark is already gone; run `whyline link <id>` again.
 
 ## Principles
 
@@ -12,6 +47,22 @@ Code is cheap to write. Understanding it is not. The reason for a change dies in
 - Local-first. No account, no server, no API key on the core path.
 - Git is the bus. Records are YAML in `.whyline/records/`. The link is a commit trailer.
 - Small records. A screen, not an essay.
+
+The product spec is [docs/01-product-spec.md](docs/01-product-spec.md).
+
+## Limits
+
+- `--amend-head` treats a commit as pushed when any of this clone's remote-tracking refs contain it. That check does not contact the network. On a detached HEAD, capture and link still work; `--amend-head` refuses.
+- A shallow clone may miss older records. `whyline why` says so.
+- Whyline uses the repository you are in. Inside a submodule, that is the submodule, not the parent.
+- On a deleted path, `why` may find nothing. `whyline show <id>` still prints the record.
+- In an empty repository, init and capture work. `why` says there are no commits yet and exits 0.
+- Two captures at once: the last write wins, and the ids do not collide.
+- Records are committed with the code. Do not put secrets in goals. Whyline does not scan for them.
+
+## Exit codes
+
+`whyline --help` lists them, from 0 ok through 9 not found. The contract is [docs/03-schema-cli-hooks.md](docs/03-schema-cli-hooks.md).
 
 ## Docs
 
