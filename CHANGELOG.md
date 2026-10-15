@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Layered config loading: built-in defaults < user config (`$WHYLINE_CONFIG_HOME`, `$XDG_CONFIG_HOME/whyline`, or `~/.config/whyline`) < project `.whyline/config.yml`.
 - `whyline show <id>` prints one record under a DRAFT or AFFIRMED banner, showing empty fields as `(none)`; `whyline list` lists records newest first with `--status`, `--path`, `--author`, and `--json`, warning on and skipping unreadable files.
 - `whyline affirm <id>` marks a draft as affirmed. It is refused (exit 8) from a non-interactive shell unless `--i-am-human` is passed; empty narrative fields need confirmation on a terminal (`--yes` skips it) and are never filled in. `--by` defaults to git `user.name`.
+- `whyline capture` (flags mode) writes a draft record from `--goal` and the other docs/03 flags, linked to the staged files or `--file` paths. Fields you leave out stay empty; `--pending` marks the id in `.whyline/pending` for the next commit.
 
 ### Fixed
 

@@ -22,6 +22,7 @@ dependencies = [
     "pydantic>=2.14,<3",
     "pyyaml>=6.0.3",
     "typer>=0.27",
+    "uuid6>=2025.0.1",
 ]
 
 [project.urls]

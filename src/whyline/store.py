@@ -206,6 +206,10 @@ class RecordStore:
             )
         return record
 
+    def require_initialized(self) -> None:
+        """Raise ``NoRepoError`` (or a schema error) unless this store is ready to use."""
+        self._require_records_dir()
+
     def _require_records_dir(self) -> None:
         if not self.records_dir.is_dir():
             raise NoRepoError(
@@ -332,6 +336,17 @@ def initialize(repo_root: Path, *, force: bool = False) -> InitResult:
 
     _ensure_gitignore_lists_pending(result, whyline_dir / GITIGNORE_FILENAME)
     return result
+
+
+def write_pending(whyline_dir: Path, record_id: UUID) -> Path:
+    """Write ``record_id`` (only the id, plus a newline) to ``.whyline/pending``.
+
+    The prepare-commit-msg hook reads this file to add the ``Whyline-Id`` trailer. It is local
+    state: ``whyline init`` lists ``pending`` in ``.whyline/.gitignore``.
+    """
+    path = whyline_dir / PENDING_FILENAME
+    _atomic_write(path, f"{record_id}\n")
+    return path
 
 
 def _ensure_file(result: InitResult, path: Path, text: str) -> None:
