@@ -25,3 +25,6 @@ htmlcov/
 # Claude Code local settings
 .claude/settings.local.json
 .claude/worktrees/
+
+# Maintainer notes. Not shipped and not published.
+docs/development/

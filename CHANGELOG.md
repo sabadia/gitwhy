@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The install instructions point at PyPI. `uv tool install intentline` installs v0.1.0.
+- The user manual is `docs/`: installation, getting started, and a guide for each command. Maintainer notes are not part of the published tree. The GitHub wiki is updated from those public pages with `python3 scripts/sync_wiki.py`.
 
 ## [0.1.0] - 2026-10-15
 
@@ -39,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Layered config loading: built-in defaults < user config (`$INTENTLINE_CONFIG_HOME`, `$XDG_CONFIG_HOME/intentline`, or `~/.config/intentline`) < project `.intentline/config.yml`.
 - `intentline show <id>` prints one record under a DRAFT or AFFIRMED banner, showing empty fields as `(none)`; `intentline list` lists records newest first with `--status`, `--path`, `--author`, and `--json`, warning on and skipping unreadable files.
 - `intentline affirm <id>` marks a draft as affirmed. It is refused (exit 8) from a non-interactive shell unless `--i-am-human` is passed; empty narrative fields need confirmation on a terminal (`--yes` skips it) and are never filled in. `--by` defaults to git `user.name`.
-- `intentline capture` (flags mode) writes a draft record from `--goal` and the other docs/03 flags, linked to the staged files or `--file` paths. Fields you leave out stay empty; `--pending` marks the id in `.intentline/pending` for the next commit.
+- `intentline capture` (flags mode) writes a draft record from `--goal` and the other capture flags, linked to the staged files or `--file` paths. Fields you leave out stay empty; `--pending` marks the id in `.intentline/pending` for the next commit.
 - `intentline capture --affirm` lets a human affirm in the same step, through the same human gate as `intentline affirm` (`--i-am-human`, `--yes`); a refusal or a declined confirmation writes nothing.
 - Interactive `intentline capture`: without `--goal` on a terminal it asks what the change is for (required), what was rejected (optional), and what would prove it wrong (optional), skipping questions whose flags were given. Without a terminal it exits 1 and asks for flags.
 - `intentline capture --session PATH` takes the goal from a session log's first user message (plain text, a JSON message list, or JSONL such as a Claude Code transcript) and links a top-level `files` list if present. Nothing else is read from the session: rejected alternatives, assumptions, and the falsifier stay empty, session captures are always drafts, and only the file name of a session outside the repository is recorded.

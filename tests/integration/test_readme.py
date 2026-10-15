@@ -28,7 +28,7 @@ _REQUIRED = (
     "git add .intentline",
     "git commit",
     "intentline why",
-    "docs/01-product-spec.md",
+    "docs/getting-started.md",
     "Apache",
     "No invented why",
     "remote-tracking",

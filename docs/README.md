@@ -1,33 +1,31 @@
-# Intentline
+# Intentline documentation
 
-Git-native intent ledger. Capture why a change exists, and get it back when you review, debug, or hand the repo to an agent.
+Intentline stores a short record of why a change exists, next to the code, and returns that record at a file and line, a commit, or a review.
 
-Code is cheap to write. Understanding it is not. The reason for a change dies in a chat or a head, reviewers reverse-engineer a clean diff, and the next session invents a history that was never true. Intentline stores a small structured record next to the code, links it to the commit, and returns it at a file and line.
+These pages are the manual. Each one has the command, the options, an example, and the errors you can hit.
 
-**Status:** specification complete, implementation not started. This repository is the product.
+## Start here
 
-## Principles
-
-- No invented why. Empty fields stay empty. Agents draft; humans affirm.
-- Local-first. No account, no server, no API key on the core path.
-- Git is the bus. The record is YAML in `.intentline/records`. The link is a `Intentline-Id` trailer.
-- Small records. A screen, not an essay.
-
-## Docs
-
-Start here if you are implementing this:
-
-| Doc | What it is |
+| Guide | What it covers |
 |---|---|
-| [CLAUDE.md](../CLAUDE.md) | Operating manual for the coding agent |
-| [docs/01-product-spec.md](01-product-spec.md) | Problem, users, scope, metrics |
-| [docs/02-architecture.md](02-architecture.md) | Components, flows, trade-offs |
-| [docs/03-schema-cli-hooks.md](03-schema-cli-hooks.md) | The contract: schema, CLI, hooks, errors |
-| [docs/04-roadmap.md](04-roadmap.md) | Phases and the issue catalog |
-| [docs/05-quality.md](05-quality.md) | Tests, CI, security, release bar |
-| [docs/06-github-protocol.md](06-github-protocol.md) | Repo, board, catch-up, next-action rules |
-| [docs/07-agent-integrations.md](07-agent-integrations.md) | Skill, MCP, hooks, AGENTS.md |
+| [Installation](installation.md) | PyPI, git, the MCP extra, and upgrading |
+| [Getting started](getting-started.md) | First repository, first record, first recall |
+| [Records](records.md) | The YAML record, every field, draft and affirmed |
+| [Capture](capture.md) | Writing a draft from flags, a prompt, or a session log |
+| [Linking commits](linking.md) | The `Intentline-Id` trailer and `--amend-head` |
+| [Recall](recall.md) | `why`, `show`, and `list` |
+| [Affirm](affirm.md) | How a human confirms a reason |
+| [Check](check.md) | Failing a large change that has no record |
+| [Hooks](hooks.md) | prepare-commit-msg and the optional pre-commit check |
+| [Configuration](configuration.md) | Project config, user config, and ignore rules |
+| [Coding agents](agents.md) | The skill, MCP, and `install-agent` |
+| [Claude Code](adapters/claude-code.md) | Skill, MCP, and the Stop hook |
+| [Other agents](adapters/other-agents.md) | Codex, Cursor, Copilot, and the shell |
+| [Exit codes](exit-codes.md) | 0 through 9 |
+| [Limits](limits.md) | Shallow clones, submodules, secrets, and the rest |
+| [Troubleshooting](troubleshooting.md) | What to do when a command refuses |
+| [Contributing](contributing.md) | How to change this codebase |
 
-## License
+## One rule
 
-Apache License 2.0. See [LICENSE](../LICENSE).
+Do not invent a why. If a person did not supply a field, leave it empty. A draft is a claim. Only a human may affirm.
