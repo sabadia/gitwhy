@@ -2,12 +2,13 @@
 
 import importlib.util
 from pathlib import Path
+from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "sync_wiki.py"
 
 
-def _sync_wiki():
+def _sync_wiki() -> ModuleType:
     spec = importlib.util.spec_from_file_location("sync_wiki", SCRIPT)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
