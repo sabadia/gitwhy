@@ -1,11 +1,11 @@
 name: Task
-description: A feature, chore, docs, or test change for the Whyline board.
+description: A feature, chore, docs, or test change for the Gitwhy board.
 title: "<phase>.<n> <title>"
 body:
   - type: markdown
     attributes:
       value: |
-        Every task lives on the Whyline project board. Keep scope to one branch and one PR.
+        Every task lives on the Gitwhy project board. Keep scope to one branch and one PR.
         Do not write a "why" you were not given. If the reason is unknown, say so.
   - type: textarea
     id: why

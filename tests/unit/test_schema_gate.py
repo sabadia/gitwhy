@@ -2,14 +2,14 @@
 
 import pytest
 
-from tests.conftest import MakeRecord, uuid7
-from whyline.errors import CorruptError, ExitCode, SchemaVersionError
-from whyline.store import (
+from gitwhy.errors import CorruptError, ExitCode, SchemaVersionError
+from gitwhy.store import (
     SCHEMA_VERSION_FILENAME,
     RecordStore,
     dump_yaml,
     ensure_supported_schema,
 )
+from tests.conftest import MakeRecord, uuid7
 
 
 def _write_record_with_version(
@@ -28,8 +28,8 @@ def test_record_with_schema_version_99_exits_6(store: RecordStore, make_record: 
     assert error.exit_code == ExitCode.SCHEMA
     assert int(error.exit_code) == 6
     assert "schema version 99" in str(error)
-    assert f".whyline/records/{uuid7(1)}.yml" in str(error)
-    assert "Upgrade whyline" in str(error)
+    assert f".gitwhy/records/{uuid7(1)}.yml" in str(error)
+    assert "Upgrade gitwhy" in str(error)
 
 
 def test_newer_record_is_reported_by_list_without_hiding_others(
@@ -65,16 +65,16 @@ def test_missing_schema_version_key_is_corrupt(store: RecordStore, make_record: 
         store.load(uuid7(1))
 
 
-# --- repository-level .whyline/schema-version ----------------------------------------------
+# --- repository-level .gitwhy/schema-version ----------------------------------------------
 
 
 def test_newer_repository_schema_blocks_every_operation(
     store: RecordStore, make_record: MakeRecord
 ) -> None:
     store.save(make_record())
-    (store.whyline_dir / SCHEMA_VERSION_FILENAME).write_text("2\n", encoding="utf-8")
+    (store.gitwhy_dir / SCHEMA_VERSION_FILENAME).write_text("2\n", encoding="utf-8")
     for operation in (lambda: store.load(uuid7(1)), store.list, lambda: store.save(make_record())):
-        with pytest.raises(SchemaVersionError, match=r"\.whyline/schema-version") as excinfo:
+        with pytest.raises(SchemaVersionError, match=r"\.gitwhy/schema-version") as excinfo:
             operation()
         assert excinfo.value.exit_code == ExitCode.SCHEMA
 
@@ -82,7 +82,7 @@ def test_newer_repository_schema_blocks_every_operation(
 def test_saving_into_newer_repository_writes_nothing(
     store: RecordStore, make_record: MakeRecord
 ) -> None:
-    (store.whyline_dir / SCHEMA_VERSION_FILENAME).write_text("3", encoding="utf-8")
+    (store.gitwhy_dir / SCHEMA_VERSION_FILENAME).write_text("3", encoding="utf-8")
     with pytest.raises(SchemaVersionError):
         store.save(make_record())
     assert list(store.records_dir.iterdir()) == []
@@ -92,7 +92,7 @@ def test_saving_into_newer_repository_writes_nothing(
 def test_current_repository_schema_is_accepted(
     store: RecordStore, make_record: MakeRecord, text: str
 ) -> None:
-    (store.whyline_dir / SCHEMA_VERSION_FILENAME).write_text(text, encoding="utf-8")
+    (store.gitwhy_dir / SCHEMA_VERSION_FILENAME).write_text(text, encoding="utf-8")
     store.save(make_record())
     assert len(store.list().records) == 1
 
@@ -106,13 +106,13 @@ def test_missing_repository_schema_file_is_accepted(
 
 @pytest.mark.parametrize("text", ["one", "", "1.0"])
 def test_garbled_repository_schema_file_is_corrupt(store: RecordStore, text: str) -> None:
-    (store.whyline_dir / SCHEMA_VERSION_FILENAME).write_text(text, encoding="utf-8")
+    (store.gitwhy_dir / SCHEMA_VERSION_FILENAME).write_text(text, encoding="utf-8")
     with pytest.raises(CorruptError, match="schema version number"):
         store.list()
 
 
 def test_unreadable_repository_schema_file_is_corrupt(store: RecordStore) -> None:
-    (store.whyline_dir / SCHEMA_VERSION_FILENAME).write_bytes(b"\xff\xfe")
+    (store.gitwhy_dir / SCHEMA_VERSION_FILENAME).write_bytes(b"\xff\xfe")
     with pytest.raises(CorruptError, match="Cannot read"):
         store.list()
 

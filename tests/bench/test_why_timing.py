@@ -1,6 +1,6 @@
 """Time ``why`` on 1,000 records. Opt-in, so CI does not gate on a clock.
 
-Run it with ``WHYLINE_BENCH=1 uv run pytest tests/bench/test_why_timing.py -s``.
+Run it with ``GITWHY_BENCH=1 uv run pytest tests/bench/test_why_timing.py -s``.
 """
 
 import os
@@ -14,16 +14,16 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from gitwhy.cli import app
+from gitwhy.models import Record
+from gitwhy.recall import Location, why_line
+from gitwhy.store import RecordStore, initialize
 from tests.bench.budget import over_budget
 from tests.conftest import record_data
-from whyline.cli import app
-from whyline.models import Record
-from whyline.recall import Location, why_line
-from whyline.store import RecordStore, initialize
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("WHYLINE_BENCH") != "1",
-    reason="local timing, not a CI gate (set WHYLINE_BENCH=1)",
+    os.environ.get("GITWHY_BENCH") != "1",
+    reason="local timing, not a CI gate (set GITWHY_BENCH=1)",
 )
 
 runner = CliRunner()
@@ -59,7 +59,7 @@ def test_why_on_one_thousand_records_stays_under_the_budget(
     (git_repo / "src" / "app.py").write_text("x = 1\n", encoding="utf-8")
     _git(git_repo, "add", "src/app.py")
     _git(git_repo, "commit", "-q", "-m", "add app")
-    store = RecordStore(git_repo / ".whyline")
+    store = RecordStore(git_repo / ".gitwhy")
     for n in range(1, RECORD_COUNT + 1):
         path = "src/app.py" if n == RECORD_COUNT else f"other/f{n}.py"
         store.save(
@@ -80,7 +80,7 @@ def test_why_on_one_thousand_records_stays_under_the_budget(
     runner.invoke(app, ["why", "src/app.py:1"])
     command_ms = _median_ms(lambda: runner.invoke(app, ["why", "src/app.py:1"]))
 
-    binary = str(Path(sys.executable).parent / "whyline")
+    binary = str(Path(sys.executable).parent / "gitwhy")
     started = time.perf_counter()
     subprocess.run(  # noqa: S603
         [binary, "why", "src/app.py:1"],
@@ -93,10 +93,10 @@ def test_why_on_one_thousand_records_stays_under_the_budget(
 
     report = (
         f"why_line median {query_ms:.2f} ms; "
-        f"whyline why in-process median {command_ms:.2f} ms; "
+        f"gitwhy why in-process median {command_ms:.2f} ms; "
         f"process {process_ms:.2f} ms"
     )
     sys.stderr.write(report + "\n")
     # The budget is the query (docs/02 section 9). Process startup is not part of it:
-    # `whyline version` alone is already over 100 ms.
+    # `gitwhy version` alone is already over 100 ms.
     assert not over_budget(query_ms), report

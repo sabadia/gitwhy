@@ -1,12 +1,12 @@
 # 03 — Schema, CLI, hooks, errors
 
-**Product:** Whyline  
+**Product:** Gitwhy  
 **Schema version:** 1  
 This document is the contract. Implement it. If you must deviate, change this document in the same PR and call it out.
 
 ## 1. Record schema (version 1)
 
-Path: `.whyline/records/<id>.yml`  
+Path: `.gitwhy/records/<id>.yml`  
 Filename is the id with hyphens, plus `.yml`.  
 Encoding: UTF-8, newline at end of file, YAML 1.2, block style, no anchors, no merge keys.
 
@@ -83,7 +83,7 @@ Validation rejects:
 - Non-relative or absolute paths in `links` (no `..`, no leading `/`).
 - Line ranges where start > end, or either line < 1.
 
-Empty optional narrative fields are valid on drafts. They are a warning, not an error, on affirm: `whyline affirm` prints the empty fields and asks for confirmation on a TTY. With `--yes` it affirms anyway and records that confirmation was skipped (set `affirmed_by` to the value given; do not pretend the fields were filled).
+Empty optional narrative fields are valid on drafts. They are a warning, not an error, on affirm: `gitwhy affirm` prints the empty fields and asks for confirmation on a TTY. With `--yes` it affirms anyway and records that confirmation was skipped (set `affirmed_by` to the value given; do not pretend the fields were filled).
 
 ### JSON Schema
 
@@ -91,7 +91,7 @@ Generate `schema/record.schema.json` from the Pydantic model in CI and commit it
 
 ## 2. Config schema
 
-Project: `.whyline/config.yml`
+Project: `.gitwhy/config.yml`
 
 ```yaml
 schema_version: 1
@@ -103,7 +103,7 @@ check:
     - "package-lock.json"
     - "pnpm-lock.yaml"
     - "*.lock"
-    - ".whyline/**"
+    - ".gitwhy/**"
     - "schema/**"
     - "*generated*"
 hooks:
@@ -113,7 +113,7 @@ capture:
   default_author_name: null
 ```
 
-User config `~/.config/whyline/config.yml` has the same shape. Project overrides user. Flags override both.
+User config `~/.config/gitwhy/config.yml` has the same shape. Project overrides user. Flags override both.
 
 ## 3. Exit codes
 
@@ -121,7 +121,7 @@ User config `~/.config/whyline/config.yml` has the same shape. Project overrides
 |---|---|---|
 | 0 | ok | Success |
 | 1 | usage | Bad arguments (Typer default may differ — normalize to 1) |
-| 2 | no_repo | Not a git repo, or whyline not initialized where required |
+| 2 | no_repo | Not a git repo, or gitwhy not initialized where required |
 | 3 | check_failed | Change needs a record |
 | 4 | corrupt | Record or config failed validation |
 | 5 | hook_conflict | Refusing to clobber hooks |
@@ -134,18 +134,18 @@ Document these in `--help` for the root command.
 
 ## 4. CLI
 
-Root: `whyline`. Every command supports `--json` where it produces data, and `--verbose`.
+Root: `gitwhy`. Every command supports `--json` where it produces data, and `--verbose`.
 
-### `whyline init`
+### `gitwhy init`
 
-Create `.whyline/config.yml`, `.whyline/schema-version`, `.whyline/records/.gitkeep` if missing. Idempotent. Refuse to overwrite a config unless `--force`.
+Create `.gitwhy/config.yml`, `.gitwhy/schema-version`, `.gitwhy/records/.gitkeep` if missing. Idempotent. Refuse to overwrite a config unless `--force`.
 
-### `whyline capture`
+### `gitwhy capture`
 
 Create a draft record.
 
 ```
-whyline capture
+gitwhy capture
   [--goal TEXT]
   [--constraint TEXT]          # repeatable
   [--rejected OPTION]          # repeatable; pair with --rejected-reason in order
@@ -159,7 +159,7 @@ whyline capture
   [--author-name TEXT]
   [--agent-tool TEXT]          # if set, author.kind = agent
   [--session PATH]             # read goal candidate only; see below
-  [--pending]                  # write id to .whyline/pending for the hook
+  [--pending]                  # write id to .gitwhy/pending for the hook
   [--affirm]                   # human gate applies
   [--yes]
 ```
@@ -178,82 +178,82 @@ Session mode (`--session PATH`):
 - Do not copy the session into the record. Do not parse free prose into `rejected` or `assumptions`.
 - Always draft.
 
-`--pending` writes the id, and only the id, to `.whyline/pending`. That file is gitignored via a `.whyline/.gitignore` that contains `pending`.
+`--pending` writes the id, and only the id, to `.gitwhy/pending`. That file is gitignored via a `.gitwhy/.gitignore` that contains `pending`.
 
-### `whyline affirm <id>`
+### `gitwhy affirm <id>`
 
 Set status to affirmed, set `affirmed_at` to now, set `affirmed_by` from `--by` or from `git config user.name`.
 
 Refuse if stdin is not a TTY, unless `--i-am-human` is passed. `--yes` skips the empty-field confirmation but does not skip the TTY / `--i-am-human` gate.
 
-### `whyline link <id>`
+### `gitwhy link <id>`
 
-Write `.whyline/pending`. With `--amend-head`: add the trailer to HEAD only if the commit is not on any remote (check `git status` / `branch -vv` and refuse if ahead-behind shows the commit is pushed, or if unsure). Default is pending-only, no amend.
+Write `.gitwhy/pending`. With `--amend-head`: add the trailer to HEAD only if the commit is not on any remote (check `git status` / `branch -vv` and refuse if ahead-behind shows the commit is pushed, or if unsure). Default is pending-only, no amend.
 
-### `whyline why <file:line>`
+### `gitwhy why <file:line>`
 
 `<file:line>` is required unless `--commit` is given.
 
 ```
-whyline why src/app.py:40
-whyline why --commit abc123
-whyline why src/app.py:40 --all
-whyline why src/app.py:40 --json
+gitwhy why src/app.py:40
+gitwhy why --commit abc123
+gitwhy why src/app.py:40 --all
+gitwhy why src/app.py:40 --json
 ```
 
 Human output starts with a banner `AFFIRMED` or `DRAFT — not a confirmed reason`. Then goal, falsifier, rejected, assumptions, evidence, id, commit sha if known.
 
-### `whyline show <id>`
+### `gitwhy show <id>`
 
 Print one record. Exit 9 if missing.
 
-### `whyline list`
+### `gitwhy list`
 
 ```
-whyline list [--status draft|affirmed] [--path PREFIX] [--author KIND] [--json]
+gitwhy list [--status draft|affirmed] [--path PREFIX] [--author KIND] [--json]
 ```
 
 Default sort: created_at descending.
 
-### `whyline check`
+### `gitwhy check`
 
 ```
-whyline check [--range REVSPEC] [--min-lines N]
+gitwhy check [--range REVSPEC] [--min-lines N]
 ```
 
 Default range is the staged diff. Exit 3 if a record is required and missing. Exit 0 otherwise. Never modifies the repo.
 
-### `whyline install-hooks` / `whyline uninstall-hooks`
+### `gitwhy install-hooks` / `gitwhy uninstall-hooks`
 
 ```
-whyline install-hooks [--check]
-whyline uninstall-hooks
+gitwhy install-hooks [--check]
+gitwhy uninstall-hooks
 ```
 
 Install a `prepare-commit-msg` hook that:
 
-- Is idempotent and marked with a line `# whyline-managed`.
-- Appends `Whyline-Id: <id>` using `git interpret-trailers` if `.whyline/pending` has an id.
+- Is idempotent and marked with a line `# gitwhy-managed`.
+- Appends `Gitwhy-Id: <id>` using `git interpret-trailers` if `.gitwhy/pending` has an id.
 - Does not add a trailer if one is already present.
-- Does not fail the commit if whyline is missing from PATH; prints a warning.
+- Does not fail the commit if gitwhy is missing from PATH; prints a warning.
 
 `--check` also installs/enables the pre-commit check and sets `hooks.check: true` in project config.
 
-Uninstall removes only blocks marked `# whyline-managed`. Leaves user content in the hook file.
+Uninstall removes only blocks marked `# gitwhy-managed`. Leaves user content in the hook file.
 
 If `core.hooksPath` is set, do not write files. Print the hook script to stdout and the config line to add. Exit 5.
 
-### `whyline schema`
+### `gitwhy schema`
 
 Print the JSON Schema to stdout. Used by CI and by other tools.
 
-### `whyline version`
+### `gitwhy version`
 
 Print version from package metadata.
 
 ## 5. Git trailer
 
-Key: `Whyline-Id`  
+Key: `Gitwhy-Id`  
 Value: the uuid  
 Placement: commit message footer, blank line before trailers, via `git interpret-trailers`.
 
@@ -264,7 +264,7 @@ Close invoices in the daily job
 
 Moves finalization out of the request path so batch discounts apply.
 
-Whyline-Id: 01932a7e-5b1c-7c3a-8f21-9c0e4d2a1b77
+Gitwhy-Id: 01932a7e-5b1c-7c3a-8f21-9c0e4d2a1b77
 ```
 
 Do not invent other trailers in v1.
@@ -273,30 +273,30 @@ Do not invent other trailers in v1.
 
 Full contract: `docs/07-agent-integrations.md`. Implement that document. Summary of the CLI pieces:
 
-### `whyline adapters claude`
+### `gitwhy adapters claude`
 
-Prints, and with `--write` writes, a Claude Code hook snippet. The Stop hook drafts a record from the session. It never affirms. It exits 0 on its own failure. The session file is `transcript_path` on the hook's stdin (https://code.claude.com/docs/en/hooks). Whyline does not guess a path under `~/.claude/projects`.
+Prints, and with `--write` writes, a Claude Code hook snippet. The Stop hook drafts a record from the session. It never affirms. It exits 0 on its own failure. The session file is `transcript_path` on the hook's stdin (https://code.claude.com/docs/en/hooks). Gitwhy does not guess a path under `~/.claude/projects`.
 
-### `whyline install-agent` / `whyline uninstall-agent`
+### `gitwhy install-agent` / `gitwhy uninstall-agent`
 
 ```
-whyline install-agent [--claude] [--skill] [--mcp] [--agents-md] [--hooks]
+gitwhy install-agent [--claude] [--skill] [--mcp] [--agents-md] [--hooks]
 ```
 
-Default: install the portable skill into `.claude/skills/whyline` and `.agents/skills/whyline`, append the managed AGENTS.md block, print the MCP config snippet. `--hooks` also installs git hooks. Idempotent. Uninstall removes only `# whyline-managed` blocks.
+Default: install the portable skill into `.claude/skills/gitwhy` and `.agents/skills/gitwhy`, append the managed AGENTS.md block, print the MCP config snippet. `--hooks` also installs git hooks. Idempotent. Uninstall removes only `# gitwhy-managed` blocks.
 
-### `whyline-mcp`
+### `gitwhy-mcp`
 
-Console script, stdio only, optional extra `whyline[mcp]`. Tools: `whyline_why`, `whyline_capture`, `whyline_list`, `whyline_show`, `whyline_check`, `whyline_link`. No affirm tool. No network.
+Console script, stdio only, optional extra `gitwhy[mcp]`. Tools: `gitwhy_why`, `gitwhy_capture`, `gitwhy_list`, `gitwhy_show`, `gitwhy_check`, `gitwhy_link`. No affirm tool. No network.
 
 ## 7. Claude Code adapter details
 
-Ship `src/whyline/adapters/claude.py` (snippet, merge, and draft) and `src/whyline/adapters/claude_stop.py` (stdin entry, always exit 0). The hook-only plugin template is `templates/claude-plugin/`. It does not copy the skill.
+Ship `src/gitwhy/adapters/claude.py` (snippet, merge, and draft) and `src/gitwhy/adapters/claude_stop.py` (stdin entry, always exit 0). The hook-only plugin template is `templates/claude-plugin/`. It does not copy the skill.
 
-`whyline adapters claude` prints, and with `--write` writes, a snippet the user can merge into `.claude/settings.json`:
+`gitwhy adapters claude` prints, and with `--write` writes, a snippet the user can merge into `.claude/settings.json`:
 
-- A `Stop` hook that runs `whyline adapters claude-stop`. That command reads `transcript_path` from the hook payload on stdin and drafts one record when the session lists files inside the repository or something is staged, and `.whyline/pending` is empty. It never affirms.
-- Claude Code documents `transcript_path` on every hook payload (https://code.claude.com/docs/en/hooks). The directory under `~/.claude/projects` is not stable, so the snippet does not hardcode it. If whyline is not on PATH, the hook command exits 0.
+- A `Stop` hook that runs `gitwhy adapters claude-stop`. That command reads `transcript_path` from the hook payload on stdin and drafts one record when the session lists files inside the repository or something is staged, and `.gitwhy/pending` is empty. It never affirms.
+- Claude Code documents `transcript_path` on every hook payload (https://code.claude.com/docs/en/hooks). The directory under `~/.claude/projects` is not stable, so the snippet does not hardcode it. If gitwhy is not on PATH, the hook command exits 0.
 
 The adapter script must:
 
@@ -309,7 +309,7 @@ Document the snippet in `docs/adapters/claude-code.md`.
 
 ## 7. Human output examples
 
-`whyline why src/billing/close.py:90`
+`gitwhy why src/billing/close.py:90`
 
 ```
 DRAFT — not a confirmed reason
@@ -334,7 +334,7 @@ Every error includes:
 - The next command to run, if one exists.
 
 Bad: `Error: invalid`  
-Good: `Record 0193… failed validation (.whyline/records/0193….yml): affirmed_at is null while status is affirmed. Fix the file or run whyline capture again.`
+Good: `Record 0193… failed validation (.gitwhy/records/0193….yml): affirmed_at is null while status is affirmed. Fix the file or run gitwhy capture again.`
 
 ## 9. Versioning policy
 
@@ -344,4 +344,4 @@ Good: `Record 0193… failed validation (.whyline/records/0193….yml): affirmed
 
 ## 10. Dogfood
 
-Once `capture` and `link` work, the whyline repo uses them. Add a note in `CONTRIBUTING.md`: non-trivial changes should carry a Whyline record. Do not enforce it in CI until Phase 4, and only if the maintainers still want it.
+Once `capture` and `link` work, the gitwhy repo uses them. Add a note in `CONTRIBUTING.md`: non-trivial changes should carry a Gitwhy record. Do not enforce it in CI until Phase 4, and only if the maintainers still want it.

@@ -1,6 +1,6 @@
 # 05 — Quality, testing, security
 
-**Product:** Whyline  
+**Product:** Gitwhy  
 A change is not done until this bar is met. "100% successful delivery" here means: every acceptance criterion has an automated test, CI is green, and the failure modes in the architecture doc have a test each.
 
 ## 1. Test pyramid
@@ -16,7 +16,7 @@ A change is not done until this bar is met. "100% successful delivery" here mean
 
 No E2E against GitHub in CI. GitHub operations are tested manually in Phase 0 and recorded in the issue.
 
-Coverage target: 90% line coverage on `src/whyline`, 100% on `models.py`, `store.py`, `check.py`, and the affirm gate. Enforce with `pytest-cov` and a `--cov-fail-under=90` in CI once Phase 2 is done. Before that, do not fail CI on coverage; do not lower the target later.
+Coverage target: 90% line coverage on `src/gitwhy`, 100% on `models.py`, `store.py`, `check.py`, and the affirm gate. Enforce with `pytest-cov` and a `--cov-fail-under=90` in CI once Phase 2 is done. Before that, do not fail CI on coverage; do not lower the target later.
 
 ## 2. Required tests (do not skip)
 
@@ -45,17 +45,17 @@ These map to failure modes. Each needs a named test.
 | check over min_lines, pending id | Exit 0 |
 | why file:line after commit with trailer | Prints goal and DRAFT or AFFIRMED banner |
 | why unknown file | Exit 9 or empty result with exit 0 — pick empty result with exit 0, document it, test it |
-| Stop-hook exits 0 when whyline or the session file is missing | Exit 0, no record written |
+| Stop-hook exits 0 when gitwhy or the session file is missing | Exit 0, no record written |
 | MCP server does not expose affirm | Tool list has no affirm |
 | MCP capture then why in a temp repo | Draft written, why returns it, banner would say DRAFT |
 | install-agent twice | One skill copy, one AGENTS.md block |
 | uninstall-agent | Managed blocks gone, user text in AGENTS.md remains |
-| Skill frontmatter | `name: whyline`, description mentions when to use it |
+| Skill frontmatter | `name: gitwhy`, description mentions when to use it |
 | Extra unknown key on read of an old file | Preserved on round-trip |
 
 ## 3. Tooling
 
-- pytest with `tmp_path` for every filesystem test. No tests write to the developer’s real home. Monkeypatch `WHYLINE_CONFIG_HOME` or pass an explicit config path.
+- pytest with `tmp_path` for every filesystem test. No tests write to the developer’s real home. Monkeypatch `GITWHY_CONFIG_HOME` or pass an explicit config path.
 - ruff for lint and format. Line length 100. Target `py312`.
 - mypy `strict = true`. No untyped defs. Pydantic plugin enabled if it still helps on v2; verify against current pydantic docs.
 - No `nox` unless needed. `uv run` is the interface.
@@ -79,7 +79,7 @@ Threat model for a local CLI:
 |---|---|
 | Tool invents a reason and a team treats it as fact | Draft/affirmed split. Banner on every human render. Affirm gate. Session capture fills only goal. |
 | Record contains a secret the user pasted | Document in README: records are committed; do not put secrets in goals. No automatic scanning in v1 (a later issue). Do not add a network secret scanner. |
-| Hook exfiltrates the diff | Hooks are local scripts we install. They call only `whyline` or `git`. Review the hook template in the PR. No curl, no wget. |
+| Hook exfiltrates the diff | Hooks are local scripts we install. They call only `gitwhy` or `git`. Review the hook template in the PR. No curl, no wget. |
 | Affirm forged by an agent | Non-TTY refusal. `--i-am-human` is an explicit override, documented as "you are lying if you are not". |
 | Path traversal via links | Reject absolute and `..`. |
 | Amend of published history | Refuse amend if the commit is on a remote. |
@@ -99,15 +99,15 @@ No authentication, no cryptography, no PII store. The user's git config name may
 
 v0.1.0 may be tagged only when:
 
-- [ ] Phases 0–4 exit criteria are Done on the board
-- [ ] CI green on `main`
-- [ ] Coverage at or above the target
-- [ ] README quickstart was run by the agent in a clean temp dir and the transcript is in the release issue
-- [ ] No network calls in core (a test or a code comment plus grep in CI for `httpx|requests|urllib.request` in `src/whyline` excluding adapters — adapters also must not)
-- [ ] CHANGELOG has the 0.1.0 section
-- [ ] User has said the tag may be pushed
+- [x] Phases 0–4 exit criteria are Done on the board
+- [x] CI green on `main`
+- [x] Coverage at or above the target
+- [x] README quickstart was run by the agent in a clean temp dir and the transcript is in the release issue
+- [x] No network calls in core (a test or a code comment plus grep in CI for `httpx|requests|urllib.request` in `src/gitwhy` excluding adapters — adapters also must not)
+- [x] CHANGELOG has the 0.1.0 section
+- [x] User has said the tag may be pushed
 
-Do not publish to PyPI until the user explicitly says to.
+Do not publish to PyPI until the user explicitly says to. The user said to publish Gitwhy on 2026-10-16.
 
 ## 8. Corner cases checklist
 

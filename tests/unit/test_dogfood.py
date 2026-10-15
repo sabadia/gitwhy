@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from whyline.adapters.skill import MARKER_FILENAME, PROJECT_SKILL_DIRS
-from whyline.hooks import BEGIN_MARKER, END_MARKER
-from whyline.store import RecordStore
+from gitwhy.adapters.skill import MARKER_FILENAME, PROJECT_SKILL_DIRS
+from gitwhy.hooks import BEGIN_MARKER, END_MARKER
+from gitwhy.store import RecordStore
 
 ROOT = Path(__file__).resolve().parents[2]
-PRACTICE = "Non-trivial changes in this repo should carry a Whyline record."
+PRACTICE = "Non-trivial changes in this repo should carry a Gitwhy record."
 GOALS = (
     PRACTICE,
     "Install the skill this repo ships, so an agent working here uses that one text.",
@@ -41,7 +41,7 @@ def dogfood_gaps(
 
 
 def _skill_matches() -> bool:
-    src = ROOT / "skills" / "whyline"
+    src = ROOT / "skills" / "gitwhy"
     try:
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     except OSError:
@@ -90,7 +90,7 @@ def test_dogfood_gaps_name_each_failure() -> None:
 
 def test_this_repo_dogfoods_drafts_and_the_shipped_skill() -> None:
     contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
-    listed = RecordStore(ROOT / ".whyline").list()
+    listed = RecordStore(ROOT / ".gitwhy").list()
     gaps = dogfood_gaps(
         record_count=len(listed.records),
         unreadable=len(listed.errors),

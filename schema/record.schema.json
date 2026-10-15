@@ -180,7 +180,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "A Whyline intent record, schema version 1.",
+  "description": "A Gitwhy intent record, schema version 1.",
   "properties": {
     "schema_version": {
       "const": 1,

@@ -1,4 +1,4 @@
-"""``whyline affirm`` end to end in a real git repository (docs/05 section 2)."""
+"""``gitwhy affirm`` end to end in a real git repository (docs/05 section 2)."""
 
 import json
 import subprocess
@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
+from gitwhy.cli import app
+from gitwhy.models import Record
+from gitwhy.store import RecordStore, dump_yaml, initialize
 from tests.conftest import MakeRecord, plain, record_data, uuid7
-from whyline.cli import app
-from whyline.models import Record
-from whyline.store import RecordStore, dump_yaml, initialize
 
 runner = CliRunner()
 ID = str(uuid7(1))
@@ -27,11 +27,11 @@ def repo(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def store(repo: Path) -> RecordStore:
-    return RecordStore(repo / ".whyline")
+    return RecordStore(repo / ".gitwhy")
 
 
 def _tty(monkeypatch: pytest.MonkeyPatch, value: bool = True) -> None:
-    monkeypatch.setattr("whyline.cli.stdin_is_tty", lambda: value)
+    monkeypatch.setattr("gitwhy.cli.stdin_is_tty", lambda: value)
 
 
 def _affirm(*args: str, input: str | None = None) -> Result:
@@ -92,7 +92,7 @@ def test_uninitialized_repo_exits_2(git_repo: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.chdir(git_repo)
     result = _affirm(ID, "--i-am-human", "--by", "Ada")
     assert result.exit_code == 2
-    assert "whyline init" in plain(result.output)
+    assert "gitwhy init" in plain(result.output)
 
 
 # --- who is affirming ------------------------------------------------------------------------
@@ -110,7 +110,7 @@ def test_no_name_anywhere_exits_1(
 ) -> None:
     path = store.save(make_record())
     before = path.read_bytes()
-    monkeypatch.setattr("whyline.affirm.config_value", lambda key, cwd: None)
+    monkeypatch.setattr("gitwhy.affirm.config_value", lambda key, cwd: None)
     result = _affirm(ID, "--i-am-human")
     assert result.exit_code == 1
     assert "--by" in plain(result.output)

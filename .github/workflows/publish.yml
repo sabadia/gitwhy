@@ -1,7 +1,7 @@
 name: Publish
 
-# Build always. Upload only when the repository variable WHYLINE_PUBLISH is true.
-# It is not set. Do not publish to PyPI until the maintainer says to.
+# Build always. Upload only when the repository variable GITWHY_PUBLISH is true.
+# The upload authenticates with the UV_PUBLISH_TOKEN repository secret.
 
 on:
   workflow_dispatch:
@@ -37,11 +37,11 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build
-    if: github.event_name == 'push' && vars.WHYLINE_PUBLISH == 'true'
+    if: github.event_name == 'push' && vars.GITWHY_PUBLISH == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,4 +56,6 @@ jobs:
         run: uv build
 
       - name: Publish
-        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
+        run: uv publish --trusted-publishing never

@@ -1,5 +1,5 @@
 [project]
-name = "whyline"
+name = "gitwhy"
 version = "0.1.0"
 description = "Git-native intent ledger. Capture why a change exists, and get it back at review and debug time."
 readme = "README.md"
@@ -26,12 +26,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sabadia/whyline"
-Issues = "https://github.com/sabadia/whyline/issues"
+Homepage = "https://github.com/sabadia/gitwhy"
+Issues = "https://github.com/sabadia/gitwhy/issues"
 
 [project.scripts]
-whyline = "whyline.cli:app"
-whyline-mcp = "whyline.mcp:main"
+gitwhy = "gitwhy.cli:app"
+gitwhy-mcp = "gitwhy.mcp:main"
 
 [project.optional-dependencies]
 mcp = [
@@ -43,14 +43,14 @@ requires = ["hatchling>=1.32,<2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/whyline"]
+packages = ["src/gitwhy"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"skills/whyline" = "whyline/bundled/whyline-skill"
-"templates/AGENTS.whyline.md" = "whyline/bundled/AGENTS.whyline.md"
+"skills/gitwhy" = "gitwhy/bundled/gitwhy-skill"
+"templates/AGENTS.gitwhy.md" = "gitwhy/bundled/AGENTS.gitwhy.md"
 
 [tool.hatch.build.targets.sdist]
-exclude = [".claude", ".whyline-dev"]
+exclude = [".claude", ".gitwhy-dev"]
 
 [tool.ruff]
 line-length = 100
@@ -92,7 +92,7 @@ dev = [
 ]
 
 [tool.coverage.run]
-source = ["whyline"]
+source = ["gitwhy"]
 
 [tool.coverage.report]
 # docs/05 section 1: CI fails below 90% line coverage. Never lower this.

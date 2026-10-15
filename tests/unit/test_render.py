@@ -3,9 +3,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from tests.conftest import record_data, uuid7
-from whyline.models import Record
-from whyline.render import (
+from gitwhy.models import Record
+from gitwhy.render import (
     BANNER_AFFIRMED,
     BANNER_DRAFT,
     LIST_WIDTH,
@@ -15,6 +14,7 @@ from whyline.render import (
     render_list_line,
     render_record,
 )
+from tests.conftest import record_data, uuid7
 
 AFFIRMED: dict[str, Any] = {
     "status": "affirmed",

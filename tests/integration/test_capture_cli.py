@@ -1,4 +1,4 @@
-"""``whyline capture`` (flags mode) against real git repositories (docs/03 section 4)."""
+"""``gitwhy capture`` (flags mode) against real git repositories (docs/03 section 4)."""
 
 import json
 import subprocess
@@ -10,12 +10,12 @@ import pytest
 import yaml
 from typer.testing import CliRunner, Result
 
+from gitwhy.cli import app
+from gitwhy.errors import NoRepoError, UsageError
+from gitwhy.gitio import staged_paths
+from gitwhy.models import Record
+from gitwhy.store import RecordStore, initialize
 from tests.conftest import plain
-from whyline.cli import app
-from whyline.errors import NoRepoError, UsageError
-from whyline.gitio import staged_paths
-from whyline.models import Record
-from whyline.store import RecordStore, initialize
 
 runner = CliRunner()
 
@@ -44,7 +44,7 @@ def repo(git_repo: Path) -> Path:
 
 
 def _records(repo: Path) -> list[Record]:
-    result = RecordStore(repo / ".whyline").list()
+    result = RecordStore(repo / ".gitwhy").list()
     assert result.errors == []
     return [Record.model_validate(r.model_dump()) for r in result.records]
 
@@ -140,8 +140,8 @@ def test_default_links_are_staged_files(repo: Path, monkeypatch: pytest.MonkeyPa
     ]
 
 
-def test_staged_whyline_files_are_not_linked(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _git(repo, "add", ".whyline")
+def test_staged_gitwhy_files_are_not_linked(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _git(repo, "add", ".gitwhy")
     _stage(repo, "a.py")
     assert staged_paths(repo) == ["a.py"]
 
@@ -167,7 +167,7 @@ def test_agent_tool_marks_agent_author(repo: Path, monkeypatch: pytest.MonkeyPat
 
 
 def test_default_author_name_from_config(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    (repo / ".whyline" / "config.yml").write_text(
+    (repo / ".gitwhy" / "config.yml").write_text(
         "capture:\n  default_author_name: Grace\n", encoding="utf-8"
     )
     _capture(repo, monkeypatch, "--goal", "first", "--file", "a.py")
@@ -180,13 +180,13 @@ def test_pending_writes_only_the_id(repo: Path, monkeypatch: pytest.MonkeyPatch)
     result = _capture(repo, monkeypatch, "--goal", "g", "--file", "a.py", "--pending")
     assert result.exit_code == 0, result.output
     (record,) = _records(repo)
-    assert (repo / ".whyline" / "pending").read_text(encoding="utf-8") == f"{record.id}\n"
-    assert "marked pending in .whyline/pending" in result.output
+    assert (repo / ".gitwhy" / "pending").read_text(encoding="utf-8") == f"{record.id}\n"
+    assert "marked pending in .gitwhy/pending" in result.output
 
 
 def test_without_pending_no_pending_file(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _capture(repo, monkeypatch, "--goal", "g", "--file", "a.py")
-    assert not (repo / ".whyline" / "pending").exists()
+    assert not (repo / ".gitwhy" / "pending").exists()
 
 
 def test_ids_are_unique_uuid7(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -203,7 +203,7 @@ def test_human_output(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (record,) = _records(repo)
     assert result.stdout.splitlines() == [
         f"Captured draft {record.id}",
-        f"  .whyline/records/{record.id}.yml",
+        f"  .gitwhy/records/{record.id}.yml",
     ]
 
 
@@ -212,7 +212,7 @@ def test_json_shape(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _capture(repo, monkeypatch, "--goal", "g", "--file", "a.py", "--pending", "--json")
     )
     assert set(data) == {"id", "path", "pending", "record"}
-    assert data["path"] == f".whyline/records/{data['id']}.yml"
+    assert data["path"] == f".gitwhy/records/{data['id']}.yml"
     assert data["pending"] is True
     assert data["record"]["id"] == data["id"]
     assert data["record"]["status"] == "draft"
@@ -257,12 +257,12 @@ def test_goal_too_long_exits_1(repo: Path, monkeypatch: pytest.MonkeyPatch) -> N
 def test_not_initialized_exits_2(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     result = _capture(git_repo, monkeypatch, "--goal", "g", "--file", "a.py")
     assert result.exit_code == 2
-    assert "whyline init" in plain(result.output)
-    assert not (git_repo / ".whyline").exists()
+    assert "gitwhy init" in plain(result.output)
+    assert not (git_repo / ".gitwhy").exists()
 
 
 def test_corrupt_config_exits_4(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    (repo / ".whyline" / "config.yml").write_text("chek: {}\n", encoding="utf-8")
+    (repo / ".gitwhy" / "config.yml").write_text("chek: {}\n", encoding="utf-8")
     result = _capture(repo, monkeypatch, "--goal", "g", "--file", "a.py")
     assert result.exit_code == 4
     assert _records(repo) == []
@@ -275,7 +275,7 @@ def test_staged_paths_outside_repo_is_no_repo(tmp_path: Path) -> None:
 
 def test_staged_paths_with_non_utf8_names(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = subprocess.CompletedProcess(args=[], returncode=0, stdout=b"ok\0bad\xff\0", stderr=b"")
-    monkeypatch.setattr("whyline.gitio.subprocess.run", lambda *a, **k: fake)
+    monkeypatch.setattr("gitwhy.gitio.subprocess.run", lambda *a, **k: fake)
     with pytest.raises(UsageError, match="not valid UTF-8"):
         staged_paths(git_repo)
 
@@ -285,7 +285,7 @@ def test_help_lists_exit_codes() -> None:
     assert "Exits 1" in text and "2 outside a git repository" in text
 
 
-# --- capture --affirm (the human gate is shared with `whyline affirm`) ------------------------
+# --- capture --affirm (the human gate is shared with `gitwhy affirm`) ------------------------
 
 FULL = (
     "--constraint", "c", "--rejected", "r", "--assumption", "a",
@@ -294,7 +294,7 @@ FULL = (
 
 
 def _tty(monkeypatch: pytest.MonkeyPatch, value: bool) -> None:
-    monkeypatch.setattr("whyline.cli.stdin_is_tty", lambda: value)
+    monkeypatch.setattr("gitwhy.cli.stdin_is_tty", lambda: value)
 
 
 def test_capture_affirm_from_non_tty_exits_8_and_writes_nothing(
@@ -305,7 +305,7 @@ def test_capture_affirm_from_non_tty_exits_8_and_writes_nothing(
     assert result.exit_code == 8, result.output
     assert "--i-am-human" in plain(result.output)
     assert _records(repo) == []
-    assert not (repo / ".whyline" / "pending").exists()
+    assert not (repo / ".gitwhy" / "pending").exists()
 
 
 def test_capture_affirm_gate_runs_before_anything_else(
@@ -385,7 +385,7 @@ def test_capture_affirm_declined_on_tty_writes_nothing(
     assert result.exit_code == 1, result.output
     assert "Not captured" in plain(result.output)
     assert _records(repo) == []
-    assert not (repo / ".whyline" / "pending").exists()
+    assert not (repo / ".gitwhy" / "pending").exists()
 
 
 def test_capture_affirm_yes_skips_the_question(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:

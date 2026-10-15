@@ -1,5 +1,5 @@
 name: Bug
-description: Whyline did something wrong.
+description: Gitwhy did something wrong.
 labels: ["type-fix"]
 body:
   - type: markdown
@@ -11,7 +11,7 @@ body:
     attributes:
       label: Command
       description: The exact command you ran.
-      placeholder: whyline why src/app.py:40
+      placeholder: gitwhy why src/app.py:40
     validations:
       required: true
   - type: input
@@ -59,7 +59,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: whyline version
-      description: Output of `whyline version`, plus your OS and Python version.
+      label: gitwhy version
+      description: Output of `gitwhy version`, plus your OS and Python version.
     validations:
       required: true

@@ -7,8 +7,8 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
+from gitwhy.models import DEFAULT_CHECK_IGNORE, Config, Record, StoredRecord
 from tests.conftest import doc_yaml_block
-from whyline.models import DEFAULT_CHECK_IGNORE, Config, Record, StoredRecord
 
 
 def _example() -> dict[str, Any]:

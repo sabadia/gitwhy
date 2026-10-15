@@ -11,9 +11,9 @@ build/
 .coverage
 htmlcov/
 
-# Whyline local state
-.whyline/pending
-.whyline-dev/
+# Gitwhy local state
+.gitwhy/pending
+.gitwhy-dev/
 
 # Env
 .env
