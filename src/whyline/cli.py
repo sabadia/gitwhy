@@ -23,6 +23,7 @@ from whyline.capture import capture as run_capture
 from whyline.errors import ExitCode, WhylineError
 from whyline.errors import UsageError as WhylineUsageError
 from whyline.gitio import repo_root
+from whyline.link import link_amend_head, link_pending
 from whyline.models import render_record_json_schema, utc_now
 from whyline.render import filter_records, render_list_line, render_record
 from whyline.session import read_session, session_files_in_repo, session_source_ref
@@ -522,3 +523,53 @@ def capture_command(
     typer.echo(f"  {shown}")
     if result.pending:
         typer.echo("  marked pending in .whyline/pending")
+
+
+@app.command()
+def link(
+    record_id: Annotated[str, typer.Argument(metavar="ID", help="Id of the record to link.")],
+    amend_head: Annotated[
+        bool,
+        typer.Option(
+            "--amend-head",
+            help="Add the trailer to the last commit instead (refused if it may be pushed).",
+        ),
+    ] = False,
+    json_output: JsonOption = False,
+) -> None:
+    """Link a record to a commit with a Whyline-Id trailer.
+
+    By default, writes the id to .whyline/pending; the prepare-commit-msg hook adds the
+    trailer to your next commit. With --amend-head, adds the trailer to HEAD now, changing
+    only its message (staged changes are not included). That is refused when HEAD is already
+    on a remote-tracking branch, is detached, or a merge or rebase is in progress, and when
+    HEAD is already linked to a different record.
+
+    Exits 1 for bad input (malformed id, no commit to amend, HEAD linked elsewhere),
+    2 outside an initialized repository, 4 for a corrupt record, 7 when amending would be
+    unsafe, and 9 for an unknown id.
+    """
+    root = repo_root(Path.cwd())
+    result = link_amend_head(root, record_id) if amend_head else link_pending(root, record_id)
+    if json_output:
+        emit_json(
+            {
+                "id": str(result.record_id),
+                "pending": result.pending,
+                "amended": result.amended,
+                "already_linked": result.already_linked,
+                "replaced_pending": None
+                if result.replaced_pending is None
+                else str(result.replaced_pending),
+            }
+        )
+        return
+    if result.pending:
+        typer.echo(f"Linked {result.record_id} to your next commit (.whyline/pending).")
+        if result.replaced_pending is not None:
+            typer.echo(f"  replaced the previously pending record {result.replaced_pending}")
+    elif result.already_linked:
+        typer.echo(f"HEAD already carries Whyline-Id: {result.record_id}. Nothing changed.")
+    else:
+        sha = result.amended or ""
+        typer.echo(f"Amended HEAD ({sha[:12]}) with Whyline-Id: {result.record_id}.")

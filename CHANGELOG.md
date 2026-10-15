@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive `whyline capture`: without `--goal` on a terminal it asks what the change is for (required), what was rejected (optional), and what would prove it wrong (optional), skipping questions whose flags were given. Without a terminal it exits 1 and asks for flags.
 - `whyline capture --session PATH` takes the goal from a session log's first user message (plain text, a JSON message list, or JSONL such as a Claude Code transcript) and links a top-level `files` list if present. Nothing else is read from the session: rejected alternatives, assumptions, and the falsifier stay empty, session captures are always drafts, and only the file name of a session outside the repository is recorded.
 - Git trailer helper (`whyline.gitio`): reads `Whyline-Id` trailers and adds one through `git interpret-trailers`, alongside `Signed-off-by` and other trailers, never replacing an existing link.
+- `whyline link <id>` marks a record for the next commit via `.whyline/pending`; `--amend-head` adds the `Whyline-Id` trailer to HEAD's message instead, refusing (exit 7) when HEAD is already on a remote-tracking branch, detached, or mid-merge/rebase, and never replacing an existing link.
 
 ### Fixed
 
