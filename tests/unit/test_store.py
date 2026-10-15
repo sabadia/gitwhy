@@ -243,3 +243,22 @@ def test_display_falls_back_to_absolute_path(tmp_path: Path) -> None:
     store = RecordStore(tmp_path / ".whyline")
     outside = Path("/somewhere/else.yml")
     assert store._display(outside) == str(outside)
+
+
+def test_mentioning_skips_other_paths_and_reports_a_bad_file(
+    store: RecordStore, make_record: MakeRecord
+) -> None:
+    store.save(make_record(1, links=[{"path": "src/app.py", "start_line": 1, "end_line": 1}]))
+    other = {"path": "other/file.py", "start_line": None, "end_line": None}
+    store.save(make_record(2, links=[other]))
+    (store.records_dir / f"{uuid7(3)}.yml").write_bytes(b"\xff path: src/app.py\n")
+    broken = "path: src/app.py\n[broken\n"
+    (store.records_dir / f"{uuid7(4)}.yml").write_text(broken, encoding="utf-8")
+
+    result = store.mentioning("src/app.py")
+
+    assert [record.id for record in result.records] == [uuid7(1)]
+    assert len(result.errors) == 2
+    messages = " ".join(error.message for error in result.errors)
+    assert "UTF-8" in messages
+    assert "not valid YAML" in messages

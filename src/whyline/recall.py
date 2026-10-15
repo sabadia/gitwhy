@@ -125,7 +125,7 @@ def why_line(root: Path, location: Location, *, all_records: bool = False) -> Re
     for commit in line_history(root, location.path, location.line):
         for record_id in commit.record_ids:
             _load_linked(store, record_id, commit.sha, found, result)
-    listing = store.list()
+    listing = store.mentioning(location.path)
     result.skipped.extend(listing.errors)
     for record in listing.records:
         if record.id not in found and _covers(record, location):

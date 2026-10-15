@@ -2,7 +2,7 @@
 
 import os
 import secrets
-from collections.abc import Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -230,11 +230,36 @@ class RecordStore:
 
     def list(self) -> ListResult:
         """Load every record file. Files that fail are reported in ``errors``, not raised."""
-        self._require_records_dir()
-        result = ListResult()
-        for path in sorted(self.records_dir.glob(f"*{RECORD_SUFFIX}")):
-            if path.name.startswith("."):
+        return self._load_files(self._iter_record_files())
+
+    def mentioning(self, needle: str) -> ListResult:
+        """Load record files whose text contains ``needle``.
+
+        A file that does not contain ``needle`` cannot link that path, so it is not
+        parsed. A mention in the goal is not itself a link: callers check the links.
+        A file that cannot be read as text is loaded anyway, so a corrupt file still
+        shows up in ``errors``.
+        """
+        paths: list[Path] = []
+        for path in self._iter_record_files():
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                paths.append(path)
                 continue
+            if needle in text:
+                paths.append(path)
+        return self._load_files(paths)
+
+    def _iter_record_files(self) -> Iterator[Path]:
+        self._require_records_dir()
+        for path in sorted(self.records_dir.glob(f"*{RECORD_SUFFIX}")):
+            if not path.name.startswith("."):
+                yield path
+
+    def _load_files(self, paths: Iterable[Path]) -> ListResult:
+        result = ListResult()
+        for path in paths:
             try:
                 result.records.append(self.load_path(path))
             except WhylineError as exc:
