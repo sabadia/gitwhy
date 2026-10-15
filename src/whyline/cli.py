@@ -20,9 +20,16 @@ from whyline import __version__
 from whyline.affirm import affirm_record, require_human, resolve_affirmer
 from whyline.capture import AffirmRequest, CaptureInput, linked_files, prompt_missing
 from whyline.capture import capture as run_capture
-from whyline.errors import ExitCode, WhylineError
+from whyline.errors import ExitCode, HookConflictError, WhylineError
 from whyline.errors import UsageError as WhylineUsageError
 from whyline.gitio import repo_root
+from whyline.hooks import (
+    InstallStatus,
+    UninstallStatus,
+    apply_pending_trailer,
+    install_hook,
+    uninstall_hook,
+)
 from whyline.link import link_amend_head, link_pending
 from whyline.models import render_record_json_schema, utc_now
 from whyline.render import filter_records, render_list_line, render_record
@@ -573,3 +580,90 @@ def link(
     else:
         sha = result.amended or ""
         typer.echo(f"Amended HEAD ({sha[:12]}) with Whyline-Id: {result.record_id}.")
+
+
+@app.command("install-hooks")
+def install_hooks() -> None:
+    """Install the prepare-commit-msg hook that adds the Whyline-Id trailer.
+
+    When .whyline/pending holds an id (see `whyline link` and `capture --pending`), the hook
+    adds `Whyline-Id: <id>` to the next commit message and clears pending. It never blocks a
+    commit: if whyline is missing or fails, the commit goes ahead without a trailer. Safe to
+    run again. Only the lines between the `# whyline-managed` markers belong to whyline.
+
+    A prepare-commit-msg hook that is not whyline's is never overwritten, and nothing is
+    written when core.hooksPath is set; in both cases the lines to add yourself are printed on
+    stdout and the command exits 5.
+
+    Exits 2 outside a git repository, and 5 when it refuses to write the hook.
+    """
+    root = repo_root(Path.cwd())
+    result = install_hook(root)
+    shown = _display_path(result.path, root)
+    if result.status is InstallStatus.CREATED:
+        typer.echo(f"Installed {result.hook} hook: {shown}")
+    elif result.status is InstallStatus.UPDATED:
+        typer.echo(f"Updated whyline's block in {shown}")
+    elif result.status is InstallStatus.UNCHANGED:
+        typer.echo(f"{result.hook} hook already installed: {shown}. Nothing changed.")
+    else:
+        typer.echo(result.snippet, nl=False)
+        if result.status is InstallStatus.HOOKS_PATH:
+            raise HookConflictError(
+                f"core.hooksPath is set, so whyline did not write into {shown}.",
+                hint=f"Add the lines printed above to {shown} (create it with `#!/bin/sh` "
+                "if needed, and make it executable).",
+            )
+        raise HookConflictError(
+            f"{shown} already exists and is not managed by whyline; it was left unchanged.",
+            hint="Add the lines printed above to it yourself.",
+        )
+
+
+@app.command("uninstall-hooks")
+def uninstall_hooks() -> None:
+    """Remove whyline's block from the prepare-commit-msg hook.
+
+    Only the lines between the `# whyline-managed` markers are removed; any other lines in
+    the hook stay. A hook file left with nothing but a shebang is deleted. Records and
+    .whyline/ are not touched.
+
+    Exits 2 outside a git repository.
+    """
+    root = repo_root(Path.cwd())
+    path, status = uninstall_hook(root)
+    shown = _display_path(path, root)
+    if status is UninstallStatus.REMOVED_FILE:
+        typer.echo(f"Removed {shown} (it held only whyline's block).")
+    elif status is UninstallStatus.REMOVED_BLOCK:
+        typer.echo(f"Removed whyline's block from {shown}; your other lines are unchanged.")
+    else:
+        typer.echo(f"No whyline hook found in {shown}. Nothing changed.")
+
+
+def _display_path(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+hook_app = typer.Typer(help="Entry points called by installed git hooks.", hidden=True)
+app.add_typer(hook_app, name="hook", hidden=True)
+
+
+@hook_app.command("prepare-commit-msg")
+def hook_prepare_commit_msg(
+    message_file: Annotated[Path, typer.Argument()],
+    source: Annotated[str | None, typer.Argument()] = None,
+    sha: Annotated[str | None, typer.Argument()] = None,
+) -> None:
+    """Called by git. Adds the pending Whyline-Id trailer. Always exits 0."""
+    try:
+        root = repo_root(Path.cwd())
+        added = apply_pending_trailer(root, root / message_file)
+    except Exception as exc:  # a hook must never block a commit: top-level safety boundary
+        typer.echo(f"whyline: could not add a Whyline-Id trailer ({exc})", err=True)
+        return
+    if added is not None:
+        typer.echo(f"whyline: added Whyline-Id: {added}", err=True)
