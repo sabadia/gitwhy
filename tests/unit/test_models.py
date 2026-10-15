@@ -1,30 +1,18 @@
 """Tests for the record and config models against docs/03."""
 
-import re
 from datetime import UTC, datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 from pydantic import ValidationError
 
+from tests.conftest import doc_yaml_block
 from whyline.models import DEFAULT_CHECK_IGNORE, Config, Record, StoredRecord
-
-SPEC = Path(__file__).resolve().parents[2] / "docs" / "03-schema-cli-hooks.md"
-
-
-def _yaml_block(heading: str) -> str:
-    """Return the first ```yaml block after ``heading`` in the schema doc."""
-    text = SPEC.read_text(encoding="utf-8")
-    start = text.index(heading)
-    match = re.search(r"```yaml\n(.*?)```", text[start:], re.DOTALL)
-    assert match, f"no yaml block after {heading!r}"
-    return match.group(1)
 
 
 def _example() -> dict[str, Any]:
-    data = yaml.safe_load(_yaml_block("## 1. Record schema"))
+    data = yaml.safe_load(doc_yaml_block("## 1. Record schema"))
     assert isinstance(data, dict)
     return data
 
@@ -278,7 +266,7 @@ def test_unknown_evidence_and_source_kinds_are_rejected() -> None:
 
 
 def test_doc_config_example_matches_defaults() -> None:
-    data = yaml.safe_load(_yaml_block("## 2. Config schema"))
+    data = yaml.safe_load(doc_yaml_block("## 2. Config schema"))
     config = Config.model_validate(data)
     assert config == Config()
     assert config.model_dump(mode="json") == data

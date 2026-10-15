@@ -11,9 +11,10 @@ Read/write split (docs/03 section 9): every record shape exists twice.
 Both families share one field list through generic bases, so they cannot drift apart.
 """
 
+import json
 from datetime import UTC, datetime
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
     AwareDatetime,
@@ -245,6 +246,25 @@ class StoredRecord(
     """A record as read from disk. Unknown keys are kept so a save does not drop them."""
 
     model_config = _READ
+
+
+JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
+
+
+def record_json_schema() -> dict[str, Any]:
+    """Return the JSON Schema for a record, generated from the writer model ``Record``.
+
+    This is the compatibility surface for other tools (docs/02 section 8). The committed copy
+    in ``schema/record.schema.json`` must match this output; a test enforces it.
+    """
+    schema = Record.model_json_schema()
+    schema["description"] = f"A Whyline intent record, schema version {SCHEMA_VERSION}."
+    return {"$schema": JSON_SCHEMA_DIALECT, **schema}
+
+
+def render_record_json_schema() -> str:
+    """Return ``record_json_schema()`` as stable, pretty-printed JSON ending in a newline."""
+    return json.dumps(record_json_schema(), indent=2, ensure_ascii=False) + "\n"
 
 
 # --- config -----------------------------------------------------------------------------------

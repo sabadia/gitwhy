@@ -3,6 +3,7 @@
 import typer
 
 from whyline import __version__
+from whyline.models import render_record_json_schema
 
 app = typer.Typer(
     name="whyline",
@@ -21,3 +22,13 @@ def main() -> None:
 def version() -> None:
     """Print the installed whyline version."""
     typer.echo(__version__)
+
+
+@app.command()
+def schema() -> None:
+    """Print the JSON Schema for a whyline record (draft 2020-12).
+
+    Other tools validate records against this. The same schema is committed as
+    schema/record.schema.json.
+    """
+    typer.echo(render_record_json_schema(), nl=False)

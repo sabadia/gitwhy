@@ -26,6 +26,12 @@ Tooling: uv, hatchling (build backend), ruff (lint and format, line length 100),
 with the Pydantic plugin, pytest. ty was evaluated and is still pre-1.0 beta, so mypy is the type
 checker until ty is production-ready.
 
+## JSON Schema
+
+`schema/record.schema.json` is generated from the `Record` model. After changing the model, run
+`uv run whyline schema > schema/record.schema.json` and commit the result. A test fails if the
+committed file is out of date.
+
 ## Roles and permissions
 
 Enforced by repository rulesets committed in `.github/rulesets/` and by `.github/CODEOWNERS`.

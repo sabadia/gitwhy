@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Typed error hierarchy with the stable exit codes from the spec (`whyline.errors`).
 - Atomic record store (`whyline.store.RecordStore`): save, load, and list under `.whyline/records`; temp file + rename; corrupt files fail cleanly with the path and a next step.
 - Schema version gate: a record or a `.whyline/schema-version` newer than this whyline is refused with exit code 6 and an upgrade hint, never guessed at.
+- `whyline schema` prints the record JSON Schema (draft 2020-12); the same schema is committed as `schema/record.schema.json` and a test fails if they drift.
 
 ### Changed
 
