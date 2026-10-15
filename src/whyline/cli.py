@@ -17,7 +17,7 @@ from typer.core import TyperGroup
 
 from whyline import __version__
 from whyline.affirm import affirm_record, require_human, resolve_affirmer
-from whyline.capture import AffirmRequest, CaptureInput
+from whyline.capture import AffirmRequest, CaptureInput, linked_files, prompt_missing
 from whyline.capture import capture as run_capture
 from whyline.errors import ExitCode, WhylineError
 from whyline.errors import UsageError as WhylineUsageError
@@ -325,6 +325,13 @@ def affirm(
 ManyOption = list[str] | None
 
 
+def _ask(question: str, required: bool) -> str:
+    """Prompt on stderr so --json output on stdout stays one clean document."""
+    if required:
+        return str(typer.prompt(question, err=True))
+    return str(typer.prompt(question, default="", show_default=False, err=True))
+
+
 @app.command("capture")
 def capture_command(
     goal: Annotated[
@@ -401,6 +408,11 @@ def capture_command(
 ) -> None:
     """Record why a change exists, as a draft.
 
+    Without --goal, on a terminal, capture asks three questions: what the change is for
+    (required), what you considered and rejected (optional), and what would prove it wrong
+    (optional). A question is skipped when its flag (--rejected, --falsifier) is given.
+    Without a terminal, pass --goal and the other fields as flags.
+
     Every field is stored exactly as given; anything you leave out stays empty. Links default to
     the staged files. Captured records are drafts: a draft is a claim, not a confirmed reason.
     A human may pass --affirm to confirm it in the same step; that is refused (exit 8) from a
@@ -415,14 +427,14 @@ def capture_command(
     interactive = stdin_is_tty()
     if affirm:
         require_human(interactive=interactive, i_am_human=i_am_human)
-    if goal is None:
+    if goal is None and not interactive:
         raise WhylineUsageError(
-            "No goal given.",
+            "No goal given, and the interactive questions need a terminal.",
             hint='Pass --goal "what this change is for" (and any other fields as flags).',
         )
     root = repo_root(Path.cwd())
     inp = CaptureInput(
-        goal=goal,
+        goal=goal or "",
         constraints=tuple(constraint or ()),
         rejected=tuple(rejected or ()),
         rejected_reasons=tuple(rejected_reason or ()),
@@ -435,6 +447,9 @@ def capture_command(
         author_name=author_name,
         agent_tool=agent_tool,
     )
+    if goal is None:
+        linked_files(inp, root=root, cwd=Path.cwd())
+        inp = prompt_missing(inp, _ask)
     request = (
         AffirmRequest(
             by=resolve_affirmer(author_name, root),
