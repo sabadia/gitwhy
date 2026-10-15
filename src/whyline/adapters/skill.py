@@ -44,6 +44,8 @@ MCP_WHERE = (
     "- Codex: `codex mcp add whyline -- whyline-mcp`, or "
     '`[mcp_servers.whyline]` with `command = "whyline-mcp"` '
     "in `.codex/config.toml` (trusted projects) or `~/.codex/config.toml`.\n"
+    "The `whyline-mcp` command needs the optional extra: "
+    "`uv tool install 'whyline[mcp]'`.\n"
 )
 
 

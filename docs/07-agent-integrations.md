@@ -109,6 +109,8 @@ whyline[mcp]
 
 The core `whyline` install must not pull MCP in. `uv tool install whyline` stays small. `uv tool install 'whyline[mcp]'` adds the server.
 
+Implemented in `src/whyline/mcp.py` with the official `mcp` package 2.3.0 (`MCPServer` from `mcp.server`). The process calls `run` with `transport="stdio"` only.
+
 Tools (names are the contract):
 
 | Tool | Maps to | Notes |
