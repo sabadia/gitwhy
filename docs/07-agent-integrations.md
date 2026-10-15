@@ -177,7 +177,9 @@ Hooks: already in `docs/03`. Extend with:
 - `Stop` hook: if the session edited files and no pending record exists, run capture in session mode (draft, goal from the user prompt only).
 - Do not add a hook that affirms.
 
-Plugin (if Claude Code plugins are the current distribution mechanism when you build this): a minimal plugin manifest under `.claude-plugin/` or the path the current docs specify, that bundles the skill and the hook template. Look up `code.claude.com/docs` for the plugin format. If plugins are unstable, ship the skill and a documented `claude mcp add` command instead, and say so in the PR.
+The Stop hook command is `whyline adapters claude-stop`. Claude Code sends the session file as `transcript_path` on stdin (https://code.claude.com/docs/en/hooks). Whyline does not hardcode `~/.claude/projects`. The hook writes one draft when that file exists, the session lists files in the repository or something is staged, and `.whyline/pending` is empty. It never affirms. It exits 0 when whyline or the session file is missing.
+
+Plugin format is stable enough to ship. `templates/claude-plugin/` is hook-only: `.claude-plugin/plugin.json` plus `hooks/hooks.json` (the same object as the settings snippet). It does not bundle a second copy of the skill. Install the skill with `whyline install-agent`. Load the plugin with `claude --plugin-dir` pointed at that directory. MCP is separate: `claude mcp add --scope project whyline -- whyline-mcp` (needs `whyline[mcp]`).
 
 ### 3.6 Scripts
 

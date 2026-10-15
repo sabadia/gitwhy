@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'command -v whyline >/dev/null 2>&1 || exit 0; whyline adapters claude-stop'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
