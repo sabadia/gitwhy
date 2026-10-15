@@ -256,7 +256,9 @@ def _display(path: Path, base: Path) -> str:
 # --- whyline init -------------------------------------------------------------------------
 
 CONFIG_HEADER = (
-    "# Whyline project config (schema version 1). Keys you remove fall back to defaults.\n"
+    "# Whyline project config. The commented keys below show the built-in defaults.\n"
+    "# Uncomment a key to set it for everyone using this repository; a project value\n"
+    "# overrides the same key in each user's ~/.config/whyline/config.yml.\n"
 )
 
 
@@ -276,8 +278,16 @@ class InitResult:
 
 
 def default_config_text() -> str:
-    """Return the YAML written to a new ``.whyline/config.yml``."""
-    return CONFIG_HEADER + dump_yaml(Config().model_dump(mode="json"))
+    """Return the YAML written to a new ``.whyline/config.yml``.
+
+    Only ``schema_version`` is set. Writing the defaults as live values would make the project
+    layer override every key of the user config (docs/02 section 5), so they are written as
+    comments generated from ``Config`` and cannot drift from the model.
+    """
+    defaults = Config().model_dump(mode="json")
+    version = defaults.pop("schema_version")
+    commented = "".join(f"# {line}\n" for line in dump_yaml(defaults).splitlines())
+    return f"{CONFIG_HEADER}schema_version: {version}\n\n{commented}"
 
 
 def initialize(repo_root: Path, *, force: bool = False) -> InitResult:

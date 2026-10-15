@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from tests.conftest import MakeRecord, plain, uuid7
 from whyline.cli import app
+from whyline.config import load_config
 from whyline.errors import CorruptError, NoRepoError
 from whyline.gitio import config_value, repo_root
 from whyline.models import Config
@@ -201,3 +202,57 @@ def test_git_config_value(git_repo: Path) -> None:
     subprocess.run(["git", "-C", str(git_repo), "config", "user.name", "Ada Lovelace"], check=True)  # noqa: S603, S607
     assert config_value("user.name", git_repo) == "Ada Lovelace"
     assert config_value("whyline.nonexistent", git_repo) is None
+
+
+# --- #57: the project config written by init must not mask the user config ----------------
+
+
+def _nested_keys(data: dict[str, object]) -> list[str]:
+    found: list[str] = []
+    for key, value in data.items():
+        found.append(key)
+        if isinstance(value, dict):
+            found.extend(_nested_keys(value))
+    return found
+
+
+def test_init_does_not_mask_user_config(
+    git_repo: Path, monkeypatch: pytest.MonkeyPatch, isolated_user_config: Path
+) -> None:
+    (isolated_user_config / "config.yml").write_text(
+        "capture:\n  default_author_name: Ada\ncheck:\n  min_lines: 10\n", encoding="utf-8"
+    )
+    code, _ = _init(git_repo, monkeypatch)
+    assert code == 0
+    config = load_config(git_repo)
+    assert config.capture.default_author_name == "Ada"
+    assert config.check.min_lines == 10
+
+
+def test_init_config_sets_only_schema_version(
+    git_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _init(git_repo, monkeypatch)
+    text = (git_repo / ".whyline" / "config.yml").read_text(encoding="utf-8")
+    assert yaml.safe_load(text) == {"schema_version": 1}
+    assert load_config(git_repo) == Config()
+
+
+def test_init_config_documents_every_default_key() -> None:
+    commented = "\n".join(
+        line[2:] for line in default_config_text().splitlines() if line.startswith("# ")
+    )
+    for key in _nested_keys(Config().model_dump(mode="json")):
+        if key != "schema_version":
+            assert f"{key}:" in commented, key
+
+
+def test_init_force_writes_the_minimal_config(
+    git_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _init(git_repo, monkeypatch)
+    config = git_repo / ".whyline" / "config.yml"
+    config.write_text("check:\n  min_lines: 99\n", encoding="utf-8")
+    _init(git_repo, monkeypatch, "--force")
+    assert config.read_text(encoding="utf-8") == default_config_text()
+    assert yaml.safe_load(config.read_text(encoding="utf-8")) == {"schema_version": 1}
