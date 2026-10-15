@@ -17,7 +17,10 @@ from typer.core import TyperGroup
 
 from whyline import __version__
 from whyline.affirm import affirm_record, require_human, resolve_affirmer
+from whyline.capture import AffirmRequest, CaptureInput
+from whyline.capture import capture as run_capture
 from whyline.errors import ExitCode, WhylineError
+from whyline.errors import UsageError as WhylineUsageError
 from whyline.gitio import repo_root
 from whyline.models import render_record_json_schema, utc_now
 from whyline.render import filter_records, render_list_line, render_record
@@ -317,3 +320,152 @@ def affirm(
         )
     else:
         typer.echo(f"Affirmed {record.id} by {record.affirmed_by}.")
+
+
+ManyOption = list[str] | None
+
+
+@app.command("capture")
+def capture_command(
+    goal: Annotated[
+        str | None, typer.Option("--goal", help="What this change is for (1-500 characters).")
+    ] = None,
+    constraint: Annotated[
+        ManyOption,
+        typer.Option("--constraint", help="A constraint the change must keep. Repeatable."),
+    ] = None,
+    rejected: Annotated[
+        ManyOption,
+        typer.Option("--rejected", help="An alternative you considered and rejected. Repeatable."),
+    ] = None,
+    rejected_reason: Annotated[
+        ManyOption,
+        typer.Option(
+            "--rejected-reason",
+            help="Why the --rejected option at the same position was rejected. Repeatable.",
+        ),
+    ] = None,
+    assumption: Annotated[
+        ManyOption,
+        typer.Option("--assumption", help="An assumption the change relies on. Repeatable."),
+    ] = None,
+    falsifier: Annotated[
+        str, typer.Option("--falsifier", help="What observation would prove this decision wrong.")
+    ] = "",
+    risk: Annotated[ManyOption, typer.Option("--risk", help="A known risk. Repeatable.")] = None,
+    file: Annotated[
+        ManyOption,
+        typer.Option(
+            "--file", help="A file this record explains. Repeatable. Default: staged files."
+        ),
+    ] = None,
+    evidence_test: Annotated[
+        str | None, typer.Option("--evidence-test", help="A test that supports the change.")
+    ] = None,
+    adr: Annotated[str | None, typer.Option("--adr", help="Path to a related ADR.")] = None,
+    author_name: Annotated[
+        str | None,
+        typer.Option(
+            "--author-name", help="Author display name. Default: capture.default_author_name."
+        ),
+    ] = None,
+    agent_tool: Annotated[
+        str | None,
+        typer.Option(
+            "--agent-tool", help="Agent tool id (e.g. claude-code). Marks the author as an agent."
+        ),
+    ] = None,
+    pending: Annotated[
+        bool,
+        typer.Option("--pending", help="Write the id to .whyline/pending for the next commit."),
+    ] = False,
+    affirm: Annotated[
+        bool,
+        typer.Option(
+            "--affirm",
+            help="Affirm the record now (humans only). The same human gate as `whyline affirm`.",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="With --affirm: do not ask about empty fields."),
+    ] = False,
+    i_am_human: Annotated[
+        bool,
+        typer.Option(
+            "--i-am-human",
+            help="With --affirm: allow a non-interactive shell. Only a human may pass this.",
+        ),
+    ] = False,
+    json_output: JsonOption = False,
+) -> None:
+    """Record why a change exists, as a draft.
+
+    Every field is stored exactly as given; anything you leave out stays empty. Links default to
+    the staged files. Captured records are drafts: a draft is a claim, not a confirmed reason.
+    A human may pass --affirm to confirm it in the same step; that is refused (exit 8) from a
+    non-interactive shell unless --i-am-human is passed. The affirmer is --author-name, else
+    git user.name.
+
+    Exits 1 for bad input (no --goal, nothing staged and no --file, a path outside the
+    repository, a declined confirmation), 2 outside a git repository or before `whyline init`,
+    4 for a corrupt config, 6 if the repository uses a newer schema than this whyline, and 8
+    when --affirm is refused by the human gate.
+    """
+    interactive = stdin_is_tty()
+    if affirm:
+        require_human(interactive=interactive, i_am_human=i_am_human)
+    if goal is None:
+        raise WhylineUsageError(
+            "No goal given.",
+            hint='Pass --goal "what this change is for" (and any other fields as flags).',
+        )
+    root = repo_root(Path.cwd())
+    inp = CaptureInput(
+        goal=goal,
+        constraints=tuple(constraint or ()),
+        rejected=tuple(rejected or ()),
+        rejected_reasons=tuple(rejected_reason or ()),
+        assumptions=tuple(assumption or ()),
+        falsifier=falsifier,
+        risks=tuple(risk or ()),
+        files=tuple(file or ()),
+        evidence_test=evidence_test,
+        adr=adr,
+        author_name=author_name,
+        agent_tool=agent_tool,
+    )
+    request = (
+        AffirmRequest(
+            by=resolve_affirmer(author_name, root),
+            interactive=interactive,
+            i_am_human=i_am_human,
+            yes=yes,
+            confirm=_confirm_empty_fields,
+        )
+        if affirm
+        else None
+    )
+    result = run_capture(inp, root=root, cwd=Path.cwd(), pending=pending, affirm=request)
+    if result.empty_fields and not interactive:
+        typer.echo(
+            f"Warning: affirmed with empty fields: {', '.join(result.empty_fields)}.", err=True
+        )
+    shown = result.path.relative_to(root).as_posix()
+    if json_output:
+        emit_json(
+            {
+                "id": str(result.record.id),
+                "path": shown,
+                "pending": result.pending,
+                "record": result.record.model_dump(mode="json"),
+            }
+        )
+        return
+    if result.record.status == "affirmed":
+        typer.echo(f"Captured and affirmed {result.record.id} by {result.record.affirmed_by}")
+    else:
+        typer.echo(f"Captured draft {result.record.id}")
+    typer.echo(f"  {shown}")
+    if result.pending:
+        typer.echo("  marked pending in .whyline/pending")

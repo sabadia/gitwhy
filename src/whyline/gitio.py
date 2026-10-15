@@ -4,7 +4,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from whyline.errors import NoRepoError
+from whyline.errors import NoRepoError, UsageError
+
+WHYLINE_PREFIX = ".whyline/"
 
 
 def _git_executable() -> str:
@@ -46,3 +48,31 @@ def config_value(key: str, cwd: Path) -> str | None:
         return None
     value = completed.stdout.strip()
     return value or None
+
+
+def staged_paths(root: Path) -> list[str]:
+    """Return repo-relative POSIX paths in the index that differ from HEAD.
+
+    Works in a repository with no commits yet. Paths under ``.whyline/`` are left out: a record
+    never explains whyline's own files.
+    """
+    completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, local git only
+        [_git_executable(), "diff", "--cached", "--name-only", "-z"],
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", errors="replace").strip()
+        raise NoRepoError(f"Cannot list staged files in {root}: {detail}.")
+    try:
+        names = completed.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        raise UsageError(
+            "Some staged file names are not valid UTF-8.", hint="Pass the files with --file."
+        ) from None
+    return [
+        name
+        for name in names.split("\0")
+        if name and name != WHYLINE_PREFIX.rstrip("/") and not name.startswith(WHYLINE_PREFIX)
+    ]
