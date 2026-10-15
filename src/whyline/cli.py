@@ -32,6 +32,7 @@ from whyline.hooks import (
 )
 from whyline.link import link_amend_head, link_pending
 from whyline.models import render_record_json_schema, utc_now
+from whyline.recall import RecallResult, parse_location, why_commit, why_line
 from whyline.render import filter_records, render_list_line, render_record
 from whyline.session import read_session, session_files_in_repo, session_source_ref
 from whyline.store import WHYLINE_DIRNAME, RecordStore, initialize
@@ -667,3 +668,92 @@ def hook_prepare_commit_msg(
         return
     if added is not None:
         typer.echo(f"whyline: added Whyline-Id: {added}", err=True)
+
+
+@app.command()
+def why(
+    location: Annotated[
+        str | None,
+        typer.Argument(metavar="FILE:LINE", help="The line to explain, e.g. src/app.py:40."),
+    ] = None,
+    commit: Annotated[
+        str | None, typer.Option("--commit", help="Explain a commit instead of a line.")
+    ] = None,
+    all_records: Annotated[
+        bool, typer.Option("--all", help="Show every matching record, not just the newest.")
+    ] = False,
+    json_output: JsonOption = False,
+) -> None:
+    """Show the records that explain a line (or a commit), newest first.
+
+    Records come from the Whyline-Id trailers of the commits that changed the line (git log
+    -L), and from records whose links cover the line. Each starts with AFFIRMED, or with
+    "DRAFT — not a confirmed reason": a draft is a claim, not a fact. Output stops at the
+    first affirmed record; drafts newer than it are still shown. --all shows everything.
+    --json prints {"records": [{"record", "resolved_commits", "via_link"}], ...} with no
+    banner text.
+
+    Nothing found is not an error: it prints that no record explains the line and exits 0.
+    Exits 1 for bad input (no FILE:LINE and no --commit, or both), 2 outside an initialized
+    repository, and 9 for an unknown --commit.
+    """
+    if (location is None) == (commit is None):
+        raise WhylineUsageError(
+            "Pass either FILE:LINE or --commit SHA (exactly one).",
+            hint="For example: whyline why src/app.py:40",
+        )
+    root = repo_root(Path.cwd())
+    if commit is not None:
+        result = why_commit(root, commit)
+        query: dict[str, object] = {"commit": commit}
+        subject = f"commit {commit}"
+    elif location is not None:
+        where = parse_location(location, cwd=Path.cwd(), root=root)
+        result = why_line(root, where, all_records=all_records)
+        query = {"path": where.path, "line": where.line}
+        subject = f"{where.path}:{where.line}"
+    else:  # pragma: no cover - excluded by the exactly-one check above
+        raise WhylineUsageError("Pass either FILE:LINE or --commit SHA.")
+    _report_recall_warnings(result)
+    if json_output:
+        emit_json(
+            {
+                "query": query,
+                "records": [
+                    {
+                        "record": e.record.model_dump(mode="json"),
+                        "resolved_commits": e.commits,
+                        "via_link": e.via_link,
+                    }
+                    for e in result.explanations
+                ],
+                "missing": [str(record_id) for record_id in result.missing],
+                "hidden": result.hidden,
+            }
+        )
+        return
+    if not result.explanations:
+        prefix = "No commits yet, and no" if result.no_commits else "No"
+        typer.echo(f"{prefix} record explains {subject}.")
+        return
+    blocks = [
+        render_record(e.record, commit=e.commits[0][:12] if e.commits else None)
+        for e in result.explanations
+    ]
+    typer.echo("\n\n".join(blocks))
+    if result.hidden:
+        noun = "record" if result.hidden == 1 else "records"
+        typer.echo(f"\n({result.hidden} older {noun} hidden behind the affirmed one; use --all.)")
+
+
+def _report_recall_warnings(result: RecallResult) -> None:
+    if result.shallow:
+        typer.echo(
+            "warning: this is a shallow clone; older records may be missing "
+            "(git fetch --unshallow).",
+            err=True,
+        )
+    for record_id in result.missing:
+        typer.echo(f"warning: record missing for id {record_id}", err=True)
+    for error in result.skipped:
+        typer.echo(f"warning: {error}", err=True)

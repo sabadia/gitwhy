@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git trailer helper (`whyline.gitio`): reads `Whyline-Id` trailers and adds one through `git interpret-trailers`, alongside `Signed-off-by` and other trailers, never replacing an existing link.
 - `whyline link <id>` marks a record for the next commit via `.whyline/pending`; `--amend-head` adds the `Whyline-Id` trailer to HEAD's message instead, refusing (exit 7) when HEAD is already on a remote-tracking branch, detached, or mid-merge/rebase, and never replacing an existing link.
 - `whyline install-hooks` / `uninstall-hooks`: a `prepare-commit-msg` hook that adds `Whyline-Id` from `.whyline/pending` and clears it. It never blocks a commit, never overwrites a foreign hook (exit 5, prints the lines to add), writes nothing when `core.hooksPath` is set (exit 5), and uninstall removes only whyline's marked block.
+- `whyline why FILE:LINE` shows the records that explain a line, newest first, from the `Whyline-Id` trailers of the commits that changed it (`git log -L`) and from records whose links cover it. Each starts with AFFIRMED or `DRAFT — not a confirmed reason`; output stops at the first affirmed record unless `--all`. `--commit SHA` explains a commit; `--json` returns raw records with `resolved_commits`.
 
 ### Fixed
 
