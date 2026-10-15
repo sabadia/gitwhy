@@ -1,6 +1,7 @@
 """Shared test fixtures."""
 
 import re
+import subprocess
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,6 +14,18 @@ from whyline.models import Record
 from whyline.store import RECORDS_DIRNAME, WHYLINE_DIRNAME, RecordStore
 
 MakeRecord = Callable[..., Record]
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_BOX = re.compile(r"[\u2500-\u257f]")
+
+
+def plain(output: str) -> str:
+    """Strip ANSI colour codes and Rich box drawing, and collapse whitespace.
+
+    Rich renders errors differently by terminal (CI forces colour), so tests compare text only.
+    """
+    return " ".join(_BOX.sub(" ", _ANSI.sub("", output)).split())
+
 
 SPEC_PATH = Path(__file__).resolve().parents[1] / "docs" / "03-schema-cli-hooks.md"
 
@@ -79,3 +92,12 @@ def whyline_dir(tmp_path: Path) -> Path:
 def store(whyline_dir: Path) -> RecordStore:
     """A store over an initialized ``.whyline`` directory."""
     return RecordStore(whyline_dir)
+
+
+@pytest.fixture
+def git_repo(tmp_path: Path) -> Path:
+    """A fresh, empty git repository in ``tmp_path / "repo"`` (no commits)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)  # noqa: S603, S607
+    return repo.resolve()

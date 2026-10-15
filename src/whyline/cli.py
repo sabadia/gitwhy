@@ -1,6 +1,7 @@
 """Typer command-line interface for whyline."""
 
-from typing import Any
+from pathlib import Path
+from typing import Annotated, Any
 
 import typer
 
@@ -13,7 +14,9 @@ from typer.core import TyperGroup
 
 from whyline import __version__
 from whyline.errors import ExitCode, WhylineError
+from whyline.gitio import repo_root
 from whyline.models import render_record_json_schema
+from whyline.store import initialize
 
 EXIT_CODES_HELP = (
     "[bold]Exit codes:[/bold] 0 ok, 1 usage, 2 not a git repo or not initialized, "
@@ -91,3 +94,48 @@ def schema() -> None:
     schema/record.schema.json.
     """
     typer.echo(render_record_json_schema(), nl=False)
+
+
+@app.command()
+def init(
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Reset .whyline/config.yml to defaults. Records are never touched.",
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Also list files that were already in place.")
+    ] = False,
+) -> None:
+    """Create .whyline/ at the root of the current git repository.
+
+    Writes config.yml, schema-version, records/.gitkeep, and a .gitignore that keeps the local
+    pending file out of commits. Safe to run again: existing files are left alone, and an
+    existing config is only replaced with --force.
+
+    Exits 2 outside a git repository, 4 if .whyline/schema-version is unreadable (use --force),
+    and 6 if the repository uses a newer schema than this whyline.
+    """
+    root = repo_root(Path.cwd())
+    result = initialize(root, force=force)
+
+    def show(path: Path) -> str:
+        return path.relative_to(root).as_posix()
+
+    if not result.changed:
+        typer.echo(
+            f"Whyline is already initialized in {show(result.whyline_dir)}/. Nothing changed."
+        )
+    else:
+        typer.echo(f"Initialized whyline in {root}:")
+        for path in result.created:
+            typer.echo(f"  created   {show(path)}")
+        for path in result.updated:
+            typer.echo(f"  updated   {show(path)}")
+    if verbose:
+        for path in result.unchanged:
+            typer.echo(f"  unchanged {show(path)}")
+    if result.changed:
+        typer.echo("Commit .whyline/ so the records travel with the repository.")

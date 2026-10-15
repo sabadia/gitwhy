@@ -4,6 +4,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
+from tests.conftest import plain
 from whyline import __version__
 from whyline.cli import WhylineGroup, app
 from whyline.errors import (
@@ -28,7 +29,7 @@ def test_version_prints_package_version() -> None:
 def test_root_help_documents_every_exit_code() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    text = " ".join(result.stdout.split())
+    text = plain(result.stdout)
     for code in ExitCode:
         assert f"{int(code)} " in text
     assert "9 not found" in text
@@ -95,7 +96,7 @@ def test_whyline_errors_keep_their_exit_code(kind: str, code: ExitCode) -> None:
 def test_whyline_error_message_and_hint_go_to_stderr() -> None:
     result = runner.invoke(probe, ["fail", "missing"])
     assert result.stdout == ""
-    stderr = " ".join(result.stderr.split())
+    stderr = plain(result.stderr)
     assert "No record with id 0193." in stderr
     assert "Run `whyline list`." in stderr
 

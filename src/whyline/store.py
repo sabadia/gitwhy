@@ -19,12 +19,16 @@ from whyline.errors import (
     UsageError,
     WhylineError,
 )
-from whyline.models import SCHEMA_VERSION, Record, StoredRecord
+from whyline.models import SCHEMA_VERSION, Config, Record, StoredRecord
 
 WHYLINE_DIRNAME = ".whyline"
 RECORDS_DIRNAME = "records"
 RECORD_SUFFIX = ".yml"
 SCHEMA_VERSION_FILENAME = "schema-version"
+CONFIG_FILENAME = "config.yml"
+GITIGNORE_FILENAME = ".gitignore"
+PENDING_FILENAME = "pending"
+GITKEEP_FILENAME = ".gitkeep"
 
 UPGRADE_HINT = "Upgrade whyline (for example `uv tool upgrade whyline`) and run the command again."
 
@@ -77,6 +81,30 @@ def ensure_supported_schema(version: object, source: str) -> None:
             f"version {SCHEMA_VERSION}.",
             hint=UPGRADE_HINT,
         )
+
+
+def read_repo_schema_version(whyline_dir: Path) -> int | None:
+    """Return the number in ``.whyline/schema-version``, or None if the file does not exist.
+
+    Raises ``CorruptError`` if the file cannot be read or does not hold an integer.
+    """
+    path = whyline_dir / SCHEMA_VERSION_FILENAME
+    shown = _display(path, whyline_dir.parent)
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return None
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CorruptError(
+            f"Cannot read {shown}: {exc}.", hint="Run `whyline init --force`."
+        ) from exc
+    try:
+        return int(text)
+    except ValueError:
+        raise CorruptError(
+            f"{shown} should contain a schema version number, got {text!r}.",
+            hint="Run `whyline init --force`.",
+        ) from None
 
 
 def parse_record_id(record_id: UUID | str) -> UUID:
@@ -188,29 +216,13 @@ class RecordStore:
 
     def _check_repo_schema_version(self) -> None:
         """Gate on ``.whyline/schema-version``. A missing file is treated as version 1."""
-        path = self.whyline_dir / SCHEMA_VERSION_FILENAME
-        try:
-            text = path.read_text(encoding="utf-8").strip()
-        except FileNotFoundError:
-            return
-        except (OSError, UnicodeDecodeError) as exc:
-            raise CorruptError(
-                f"Cannot read {self._display(path)}: {exc}.", hint="Run `whyline init --force`."
-            ) from exc
-        try:
-            version = int(text)
-        except ValueError:
-            raise CorruptError(
-                f"{self._display(path)} should contain a schema version number, got {text!r}.",
-                hint="Run `whyline init --force`.",
-            ) from None
-        ensure_supported_schema(version, f"This repository ({self._display(path)})")
+        version = read_repo_schema_version(self.whyline_dir)
+        if version is not None:
+            path = self.whyline_dir / SCHEMA_VERSION_FILENAME
+            ensure_supported_schema(version, f"This repository ({self._display(path)})")
 
     def _display(self, path: Path) -> str:
-        try:
-            return path.relative_to(self.whyline_dir.parent).as_posix()
-        except ValueError:
-            return str(path)
+        return _display(path, self.whyline_dir.parent)
 
     def list(self) -> ListResult:
         """Load every record file. Files that fail are reported in ``errors``, not raised."""
@@ -227,6 +239,123 @@ class RecordStore:
 
 
 _FIX_HINT = "Fix the file or run `whyline capture` again."
+
+
+def _display(path: Path, base: Path) -> str:
+    """Show ``path`` relative to ``base`` (the repository root) when it is inside it."""
+    try:
+        return path.relative_to(base).as_posix()
+    except ValueError:
+        return str(path)
+
+
+# --- whyline init -------------------------------------------------------------------------
+
+CONFIG_HEADER = (
+    "# Whyline project config (schema version 1). Keys you remove fall back to defaults.\n"
+)
+
+
+@dataclass(frozen=True)
+class InitResult:
+    """What ``initialize`` did to each managed path."""
+
+    whyline_dir: Path
+    created: list[Path] = field(default_factory=list)
+    updated: list[Path] = field(default_factory=list)
+    unchanged: list[Path] = field(default_factory=list)
+
+    @property
+    def changed(self) -> bool:
+        """True if any file or directory was created or rewritten."""
+        return bool(self.created or self.updated)
+
+
+def default_config_text() -> str:
+    """Return the YAML written to a new ``.whyline/config.yml``."""
+    return CONFIG_HEADER + dump_yaml(Config().model_dump(mode="json"))
+
+
+def initialize(repo_root: Path, *, force: bool = False) -> InitResult:
+    """Create the ``.whyline`` layout in ``repo_root``. Safe to run again.
+
+    Creates whatever is missing: ``config.yml``, ``schema-version``, ``records/.gitkeep``, and a
+    ``.gitignore`` that lists ``pending``. An existing config is left alone unless ``force`` is
+    set, in which case it is reset to defaults. Records are never modified or deleted. A
+    repository marked with a newer schema version is refused, even with ``force``.
+    """
+    whyline_dir = repo_root / WHYLINE_DIRNAME
+    if whyline_dir.exists() and not whyline_dir.is_dir():
+        raise CorruptError(
+            f"{_display(whyline_dir, repo_root)} exists but is not a directory.",
+            hint="Move it aside and run `whyline init` again.",
+        )
+    result = InitResult(whyline_dir=whyline_dir)
+
+    version_path = whyline_dir / SCHEMA_VERSION_FILENAME
+    try:
+        version = read_repo_schema_version(whyline_dir)
+    except CorruptError:
+        if not force:
+            raise
+        version = -1  # unreadable; rewritten below
+    if version is not None:
+        ensure_supported_schema(version, f"This repository ({_display(version_path, repo_root)})")
+
+    records_dir = whyline_dir / RECORDS_DIRNAME
+    if records_dir.is_dir():
+        result.unchanged.append(records_dir)
+    else:
+        records_dir.mkdir(parents=True)
+        result.created.append(records_dir)
+
+    _ensure_file(result, records_dir / GITKEEP_FILENAME, "")
+
+    if version is None:
+        _atomic_write(version_path, f"{SCHEMA_VERSION}\n")
+        result.created.append(version_path)
+    elif version != SCHEMA_VERSION:
+        _atomic_write(version_path, f"{SCHEMA_VERSION}\n")
+        result.updated.append(version_path)
+    else:
+        result.unchanged.append(version_path)
+
+    config_path = whyline_dir / CONFIG_FILENAME
+    if not config_path.exists():
+        _atomic_write(config_path, default_config_text())
+        result.created.append(config_path)
+    elif force:
+        _atomic_write(config_path, default_config_text())
+        result.updated.append(config_path)
+    else:
+        result.unchanged.append(config_path)
+
+    _ensure_gitignore_lists_pending(result, whyline_dir / GITIGNORE_FILENAME)
+    return result
+
+
+def _ensure_file(result: InitResult, path: Path, text: str) -> None:
+    if path.exists():
+        result.unchanged.append(path)
+    else:
+        _atomic_write(path, text)
+        result.created.append(path)
+
+
+def _ensure_gitignore_lists_pending(result: InitResult, path: Path) -> None:
+    """Make sure ``.whyline/.gitignore`` ignores ``pending``, keeping any other lines."""
+    try:
+        current = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        _atomic_write(path, f"{PENDING_FILENAME}\n")
+        result.created.append(path)
+        return
+    if PENDING_FILENAME in (line.strip() for line in current.splitlines()):
+        result.unchanged.append(path)
+        return
+    separator = "" if current == "" or current.endswith("\n") else "\n"
+    _atomic_write(path, f"{current}{separator}{PENDING_FILENAME}\n")
+    result.updated.append(path)
 
 
 def _atomic_write(target: Path, text: str) -> None:

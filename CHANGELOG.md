@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schema version gate: a record or a `.whyline/schema-version` newer than this whyline is refused with exit code 6 and an upgrade hint, never guessed at.
 - `whyline schema` prints the record JSON Schema (draft 2020-12); the same schema is committed as `schema/record.schema.json` and a test fails if they drift.
 - Root `--help` lists the exit codes.
+- `whyline init` creates `.whyline/` (config, schema-version, records, and a `.gitignore` for the local pending file) at the repository root. Safe to rerun; `--force` resets only the config and never touches records.
 
 ### Fixed
 
