@@ -145,3 +145,103 @@ def add_whyline_trailer(message: str, record_id: UUID, cwd: Path) -> str:
     return _interpret_trailers(
         ["--if-exists", "doNothing", "--trailer", f"{TRAILER_KEY}: {record_id}"], message, cwd
     )
+
+
+# --- HEAD inspection and message-only amend (docs/03 section 4, `whyline link`) ----------------
+
+
+def _run_git(
+    args: list[str], cwd: Path, *, stdin: str | None = None
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603 - fixed argv, no shell, local git only
+        [_git_executable(), *args],
+        cwd=cwd,
+        input=stdin,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def head_commit(cwd: Path) -> str | None:
+    """Return the full sha of HEAD, or None if the branch has no commits yet."""
+    completed = _run_git(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"], cwd)
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
+def current_branch(cwd: Path) -> str | None:
+    """Return the checked-out branch name, or None when HEAD is detached."""
+    completed = _run_git(["symbolic-ref", "--quiet", "--short", "HEAD"], cwd)
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
+def remote_refs_containing(rev: str, cwd: Path) -> list[str]:
+    """Return remote-tracking refs (``refs/remotes/...``) that already contain ``rev``.
+
+    Uses only local refs, so it never touches the network. A non-empty result means the
+    commit has been pushed (as far as this clone knows).
+    """
+    completed = _run_git(
+        ["for-each-ref", "--contains", rev, "--format=%(refname)", "refs/remotes"], cwd
+    )
+    if completed.returncode != 0:
+        raise UsageError(f"git for-each-ref failed: {completed.stderr.strip() or 'unknown error'}.")
+    return [line for line in completed.stdout.splitlines() if line]
+
+
+_IN_PROGRESS_MARKERS = (
+    ("MERGE_HEAD", "a merge"),
+    ("CHERRY_PICK_HEAD", "a cherry-pick"),
+    ("REVERT_HEAD", "a revert"),
+    ("rebase-merge", "a rebase"),
+    ("rebase-apply", "a rebase or am"),
+    ("BISECT_LOG", "a bisect"),
+)
+
+
+def operation_in_progress(cwd: Path) -> str | None:
+    """Return a description of an unfinished merge, rebase, etc., or None if there is none."""
+    for marker, description in _IN_PROGRESS_MARKERS:
+        completed = _run_git(["rev-parse", "--git-path", marker], cwd)
+        path = Path(completed.stdout.strip())
+        if not path.is_absolute():
+            path = cwd / path
+        if completed.returncode == 0 and path.exists():
+            return description
+    return None
+
+
+def commit_message(rev: str, cwd: Path) -> str:
+    """Return the full message of commit ``rev``, ending in exactly one newline.
+
+    ``--format=%B`` appends a newline of its own; it is dropped so a read-modify-amend cycle
+    does not grow the message.
+    """
+    completed = _run_git(["log", "-1", "--format=%B", rev, "--"], cwd)
+    if completed.returncode != 0:
+        raise UsageError(f"Cannot read commit {rev}: {completed.stderr.strip()}.")
+    return completed.stdout.rstrip("\n") + "\n"
+
+
+def amend_head_message(message: str, cwd: Path) -> str:
+    """Replace HEAD's message with ``message`` and return the new HEAD sha.
+
+    ``--only`` with no paths changes the message alone: staged changes stay staged and out of
+    the commit. ``--cleanup=verbatim`` keeps the message as given, except that trailing blank
+    lines are dropped. Hooks still run.
+    """
+    completed = _run_git(
+        ["commit", "--amend", "--only", "--cleanup=verbatim", "--file=-"],
+        cwd,
+        stdin=message.rstrip("\n") + "\n",
+    )
+    if completed.returncode != 0:
+        raise UsageError(
+            "git commit --amend failed; HEAD is unchanged: "
+            f"{completed.stderr.strip() or completed.stdout.strip() or 'unknown error'}."
+        )
+    return _run_git(["rev-parse", "HEAD"], cwd).stdout.strip()

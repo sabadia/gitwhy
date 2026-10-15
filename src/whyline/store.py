@@ -359,6 +359,18 @@ def write_pending(whyline_dir: Path, record_id: UUID) -> Path:
     return path
 
 
+def read_pending(whyline_dir: Path) -> UUID | None:
+    """Return the id in ``.whyline/pending``, or None if it is missing, empty, or not a UUID."""
+    try:
+        text = (whyline_dir / PENDING_FILENAME).read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, UnicodeDecodeError):
+        return None
+    try:
+        return UUID(text)
+    except ValueError:
+        return None
+
+
 def _ensure_file(result: InitResult, path: Path, text: str) -> None:
     if path.exists():
         result.unchanged.append(path)
