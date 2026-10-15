@@ -93,7 +93,7 @@ No authentication, no cryptography, no PII store. The user's git config name may
 - README: what it is, install, 60-second quickstart, principles, exit codes pointer, license.
 - `--help` is the man page. Keep it accurate.
 - `docs/` stays the spec. When behavior changes, change the spec in the same PR.
-- CHANGELOG: Keep a Changelog, `[Unreleased]` until 0.1.0.
+- CHANGELOG: Keep a Changelog. `[Unreleased]` holds changes after 0.1.0. The `[0.1.0]` section is the release notes.
 
 ## 7. Definition of done (release)
 

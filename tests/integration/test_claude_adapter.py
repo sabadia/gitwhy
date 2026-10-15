@@ -401,7 +401,7 @@ def test_plugin_matches_the_snippet_and_does_not_copy_the_skill() -> None:
     assert manifest["name"] == "whyline"
     assert "does not affirm" in manifest["description"]
     assert manifest["author"] == {"name": "Mahamudul Hasan"}
-    assert "version" not in manifest
+    assert manifest["version"] == "0.1.0"
     hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))
     assert hooks == claude_hook_snippet()
     assert not (PLUGIN / "skills").exists()

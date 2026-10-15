@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-15
+
 ### Added
 
+- Version 0.1.0. The notes for the GitHub release are this section. `.github/workflows/publish.yml` builds the package and runs `uv publish --dry-run`. It uploads to PyPI only when the repository variable `WHYLINE_PUBLISH` is `true`. That variable is not set, and the tag is not pushed until you say it may be.
 - `why` on 1,000 records stays under the 100 ms budget. Parsing every record took 728 ms, so a record file is parsed only when its text mentions the path. Local `why_line` median was 75 ms and 84 ms on two runs. The timing test is opt-in (`WHYLINE_BENCH=1`) and is not a CI gate. A fresh process is slower: interpreter startup alone (`whyline version`) is about 117 ms.
 - This repo dogfoods Whyline: `.whyline/records` holds a draft for the contributing practice, the installed skill, and the guard test. `whyline install-agent` has been run here. CONTRIBUTING states the practice. Records stay drafts, with `rejected`, `assumptions`, and `falsifier` empty.
 - Product README: install from git until PyPI (not published yet), a quickstart (init, hooks, capture, link, commit, why), and the accepted limits (remote-tracking amend check, aborted commits, shallow clones, submodules, deleted files, empty repos, concurrent capture, secrets). Every command's `--help` names its exit codes.
@@ -53,4 +56,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI fails when line coverage of `src/whyline` drops below 90%.
 - Project board type field is named `Work Type`; GitHub reserves `Type`.
 
-[Unreleased]: https://github.com/sabadia/whyline/commits/main
+[Unreleased]: https://github.com/sabadia/whyline/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sabadia/whyline/releases/tag/v0.1.0

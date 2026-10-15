@@ -1,6 +1,6 @@
 [project]
 name = "whyline"
-version = "0.0.0"
+version = "0.1.0"
 description = "Git-native intent ledger. Capture why a change exists, and get it back at review and debug time."
 readme = "README.md"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ requires-python = ">=3.12"
 authors = [{ name = "Mahamudul Hasan" }]
 keywords = ["git", "intent", "decision-records", "cli", "code-review", "agents"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",

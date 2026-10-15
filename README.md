@@ -7,7 +7,7 @@ The reason for a change dies in a chat or a head.
 Reviewers reverse-engineer a clean diff, and the next session invents a history that was never true.
 Whyline stores a small structured record next to the code, links it to the commit with a `Whyline-Id` trailer, and returns it at a file and line.
 
-**Status:** pre-release, MVP in progress.
+**Status:** v0.1.0. Not on PyPI yet.
 
 ## Install
 

@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01a140c3-5bc4-701c-8ad9-2759456767f4
+status: draft
+created_at: '2026-10-15T18:11:47Z'
+updated_at: '2026-10-15T18:11:47Z'
+affirmed_at: null
+affirmed_by: null
+author:
+  kind: agent
+  name: null
+  tool: grok
+goal: Set the version to 0.1.0 and add a publish workflow that uploads only when WHYLINE_PUBLISH is true.
+constraints: []
+rejected: []
+assumptions: []
+falsifier: ''
+evidence: []
+links:
+- path: pyproject.toml
+  start_line: null
+  end_line: null
+- path: .github/workflows/publish.yml
+  start_line: null
+  end_line: null
+adr: null
+risks: []
+source:
+  kind: flags
+  ref: null
