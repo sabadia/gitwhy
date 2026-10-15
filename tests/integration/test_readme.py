@@ -114,7 +114,7 @@ def test_every_command_help_names_exit_codes() -> None:
 def test_readme_has_install_quickstart_limits_and_a_short_quickstart() -> None:
     for snippet in _REQUIRED:
         assert snippet in README
-    assert "not on PyPI yet" in README
+    assert "v0.1.0 on PyPI" in README
     body = _quickstart_body(README)
     assert len(body.splitlines()) <= 30
     for step in (
