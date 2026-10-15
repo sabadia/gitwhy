@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Task and Bug issue forms that require acceptance criteria.
 - Repository rulesets and CODEOWNERS: only the admin may delete or force-push `main`, `stg`, or `dev`; `main` changes only through code-owner-approved pull requests.
 - Record and config models (`whyline.models`) matching the schema v1 contract: UUIDv7 ids, UTC timestamps, draft/affirmed consistency, repo-relative link paths, and a writer/reader split that keeps unknown keys on read.
+- Typed error hierarchy with the stable exit codes from the spec (`whyline.errors`).
+- Atomic record store (`whyline.store.RecordStore`): save, load, and list under `.whyline/records`; temp file + rename; corrupt files fail cleanly with the path and a next step.
 
 ### Changed
 
