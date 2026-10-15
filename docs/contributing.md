@@ -43,13 +43,14 @@ Coverage of `src/intentline` fails under 90%. The suite is held at 100%.
 
 User-facing documentation is the Markdown in `docs/`, except `docs/development/`, which is not part of the published tree.
 
-The GitHub wiki is a copy of those public pages. After a docs change lands on `main`:
+The GitHub wiki is a copy of those public pages. `.github/workflows/wiki.yml` publishes them when a push to `main` changes `docs/`. The same sync can be run by hand:
 
 ```sh
-python3 scripts/sync_wiki.py
+git clone git@github.com:sabadia/intentline.wiki.git /tmp/intentline.wiki
+python3 scripts/sync_wiki.py /tmp/intentline.wiki --push
 ```
 
-That clones `sabadia/intentline.wiki`, rewrites links for the wiki's flat pages, and pushes `master` when you pass `--push`. Review the diff before you push.
+That rewrites links for the wiki's flat pages and pushes `master`.
 
 ## Pull requests
 

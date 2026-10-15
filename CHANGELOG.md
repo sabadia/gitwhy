@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The install instructions point at PyPI. `uv tool install intentline` installs v0.1.0.
-- The user manual is `docs/`: installation, getting started, and a guide for each command. Maintainer notes are not part of the published tree. The GitHub wiki is updated from those public pages with `python3 scripts/sync_wiki.py`.
+- The user manual is `docs/`: installation, getting started, and a guide for each command. Maintainer notes are not part of the published tree. A push to `main` that changes `docs/` publishes those pages to the GitHub wiki.
 
 ## [0.1.0] - 2026-10-15
 
