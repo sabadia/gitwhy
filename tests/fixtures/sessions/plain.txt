@@ -1,0 +1,8 @@
+
+
+   Add a daily close job    for invoices
+We rejected Redis because it adds a server.
+Assumption: invoices are mutable.
+This would be wrong if customers are charged early.
+Constraint: keep the API shape.
+Risk: the close job has no lock.

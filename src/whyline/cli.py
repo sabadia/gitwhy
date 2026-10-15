@@ -2,6 +2,7 @@
 
 import json
 import sys
+from dataclasses import replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
@@ -24,6 +25,7 @@ from whyline.errors import UsageError as WhylineUsageError
 from whyline.gitio import repo_root
 from whyline.models import render_record_json_schema, utc_now
 from whyline.render import filter_records, render_list_line, render_record
+from whyline.session import read_session, session_files_in_repo, session_source_ref
 from whyline.store import WHYLINE_DIRNAME, RecordStore, initialize
 
 EXIT_CODES_HELP = (
@@ -404,6 +406,14 @@ def capture_command(
             help="With --affirm: allow a non-interactive shell. Only a human may pass this.",
         ),
     ] = False,
+    session: Annotated[
+        Path | None,
+        typer.Option(
+            "--session",
+            help="Take the goal from a session log's first user message (text or JSON). "
+            "Nothing else is read from it.",
+        ),
+    ] = None,
     json_output: JsonOption = False,
 ) -> None:
     """Record why a change exists, as a draft.
@@ -419,14 +429,35 @@ def capture_command(
     non-interactive shell unless --i-am-human is passed. The affirmer is --author-name, else
     git user.name.
 
-    Exits 1 for bad input (no --goal, nothing staged and no --file, a path outside the
-    repository, a declined confirmation), 2 outside a git repository or before `whyline init`,
+    --session PATH reads a session log (plain text, a JSON message list, or JSONL such as a
+    Claude Code transcript). Only the first user message (as the goal) and a top-level "files"
+    list are used; --goal and --file override them. Rejected alternatives, assumptions, and the
+    falsifier are never taken from session prose: they stay empty unless you pass them. A
+    session capture is always a draft, so --session cannot be combined with --affirm.
+
+    Exits 1 for bad input (no --goal and no terminal, an unreadable session, --session with
+    --affirm, nothing staged and no --file, a path outside the repository, a declined
+    confirmation), 2 outside a git repository or before `whyline init`,
     4 for a corrupt config, 6 if the repository uses a newer schema than this whyline, and 8
     when --affirm is refused by the human gate.
     """
     interactive = stdin_is_tty()
     if affirm:
         require_human(interactive=interactive, i_am_human=i_am_human)
+    if session is not None and affirm:
+        raise WhylineUsageError(
+            "A session capture is always a draft; --session cannot be combined with --affirm.",
+            hint="Capture the draft, read it, then run `whyline affirm <id>` yourself.",
+        )
+    session_path = None if session is None else Path.cwd() / session
+    session_facts = None if session_path is None else read_session(session_path)
+    if session_facts is not None and goal is None:
+        if session_facts.goal is None:
+            raise WhylineUsageError(
+                f"Session file {session} has no user message or text line to use as the goal.",
+                hint='Pass --goal "what this change is for".',
+            )
+        goal = session_facts.goal
     if goal is None and not interactive:
         raise WhylineUsageError(
             "No goal given, and the interactive questions need a terminal.",
@@ -447,6 +478,13 @@ def capture_command(
         author_name=author_name,
         agent_tool=agent_tool,
     )
+    if session_path is not None and session_facts is not None:
+        inp = replace(
+            inp,
+            files=inp.files or session_files_in_repo(session_facts.files, root),
+            source_kind="session",
+            source_ref=session_source_ref(session_path, root),
+        )
     if goal is None:
         linked_files(inp, root=root, cwd=Path.cwd())
         inp = prompt_missing(inp, _ask)

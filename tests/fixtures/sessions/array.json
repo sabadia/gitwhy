@@ -1,0 +1,10 @@
+[
+  {"role": "assistant", "content": "Ready."},
+  {"role": "user", "content": [
+    {"type": "tool_result", "content": "ignored tool output"},
+    {"type": "text", "text": "Retry on 429"},
+    {"type": "image", "source": "ignored"},
+    {"type": "text", "text": "but not on 500."}
+  ]},
+  {"role": "assistant", "content": "Rejected: retrying every 5xx. Assumption: 429 is transient."}
+]

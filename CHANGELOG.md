@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `whyline capture` (flags mode) writes a draft record from `--goal` and the other docs/03 flags, linked to the staged files or `--file` paths. Fields you leave out stay empty; `--pending` marks the id in `.whyline/pending` for the next commit.
 - `whyline capture --affirm` lets a human affirm in the same step, through the same human gate as `whyline affirm` (`--i-am-human`, `--yes`); a refusal or a declined confirmation writes nothing.
 - Interactive `whyline capture`: without `--goal` on a terminal it asks what the change is for (required), what was rejected (optional), and what would prove it wrong (optional), skipping questions whose flags were given. Without a terminal it exits 1 and asks for flags.
+- `whyline capture --session PATH` takes the goal from a session log's first user message (plain text, a JSON message list, or JSONL such as a Claude Code transcript) and links a top-level `files` list if present. Nothing else is read from the session: rejected alternatives, assumptions, and the falsifier stay empty, session captures are always drafts, and only the file name of a session outside the repository is recorded.
 
 ### Fixed
 

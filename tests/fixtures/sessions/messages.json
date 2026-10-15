@@ -1,0 +1,10 @@
+{
+  "files": ["src/billing/close.py", "/nowhere/outside.py"],
+  "messages": [
+    {"role": "system", "content": "You are a coding agent."},
+    {"role": "assistant", "content": "Hi. What should we work on?"},
+    {"role": "user", "content": "Close invoices at end of day,\n   not per request."},
+    {"role": "assistant", "content": "We rejected Redis because it adds a server. Assumption: invoices are mutable until the close job runs. This would be wrong if customers are charged early. Constraint: keep the API shape."},
+    {"role": "user", "content": "Also: we rejected per-request finalization because it breaks discounts."}
+  ]
+}
