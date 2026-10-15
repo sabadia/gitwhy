@@ -1,0 +1,43 @@
+name: Task
+description: A feature, chore, docs, or test change for the Whyline board.
+title: "<phase>.<n> <title>"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every task lives on the Whyline project board. Keep scope to one branch and one PR.
+        Do not write a "why" you were not given. If the reason is unknown, say so.
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: One or two sentences. What problem does this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable statements. The issue is Done only when every box is ticked.
+      value: |
+        - [ ] ...
+        - [ ] Tests cover the failure path named in the criteria
+        - [ ] Docs / --help updated if user-facing
+        - [ ] `uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest` pass
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Spec
+      description: The docs/ file and section this implements.
+      placeholder: docs/03-schema-cli-hooks.md section 4
+    validations:
+      required: false
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this issue must not pull in.
+    validations:
+      required: false

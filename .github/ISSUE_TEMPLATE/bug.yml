@@ -1,0 +1,65 @@
+name: Bug
+description: Whyline did something wrong.
+labels: ["type-fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Records are committed to your repository. Do not paste secrets, tokens, or private record contents.
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      description: The exact command you ran.
+      placeholder: whyline why src/app.py:40
+    validations:
+      required: true
+  - type: input
+    id: exit-code
+    attributes:
+      label: Exit code
+      description: Run `echo $?` right after the command.
+    validations:
+      required: true
+  - type: dropdown
+    id: record-status
+    attributes:
+      label: Record status involved
+      options:
+        - draft
+        - affirmed
+        - no record
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Output and error message.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we will know it is fixed. Include the failing case as a test.
+      value: |
+        - [ ] ...
+        - [ ] A test reproduces the bug and now passes
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: whyline version
+      description: Output of `whyline version`, plus your OS and Python version.
+    validations:
+      required: true
