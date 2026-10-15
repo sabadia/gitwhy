@@ -26,6 +26,25 @@ Tooling: uv, hatchling (build backend), ruff (lint and format, line length 100),
 with the Pydantic plugin, pytest. ty was evaluated and is still pre-1.0 beta, so mypy is the type
 checker until ty is production-ready.
 
+## Roles and permissions
+
+Enforced by repository rulesets committed in `.github/rulesets/` and by `.github/CODEOWNERS`.
+
+| Role | Who | Can |
+|---|---|---|
+| Admin | Repository owner | Everything, including bypassing every ruleset |
+| Maintainer | Collaborators with write access, listed in CODEOWNERS | Review and approve PRs; merge approved PRs into `main` |
+| Contributor | Anyone else | Fork, work on branches in the fork, open a PR against `main` |
+
+- `main`, `stg`, and `dev` cannot be deleted or force-pushed by anyone but the admin.
+- Changes reach `main` only through a pull request with one approval from a code owner.
+  The approver must be someone other than the last pusher. New pushes dismiss earlier approvals.
+  Squash or merge commits only; no rebase-merge.
+- Coding agents have exactly the permissions of the account whose credentials they use.
+  An agent run by the admin acts as the admin; one run by a maintainer acts as a maintainer.
+  GitHub Apps and bots (for example a hosted coding-agent app) act as their own identity, not as a user,
+  and get no bypass unless the admin adds them.
+
 ## Branches and issues
 
 - One issue per branch. Branch name: `type/short-slug`.

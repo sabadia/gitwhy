@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python package skeleton: uv project with hatchling, `src/` layout, `whyline` console script with a `version` command, ruff, mypy strict, and pytest.
 - CI on GitHub Actions: ruff check, ruff format --check, mypy, and pytest with coverage on Python 3.12 and 3.13 for pushes to `main` and pull requests.
 - Task and Bug issue forms that require acceptance criteria.
+- Repository rulesets and CODEOWNERS: only the admin may delete or force-push `main`, `stg`, or `dev`; `main` changes only through code-owner-approved pull requests.
 
 ### Changed
 
