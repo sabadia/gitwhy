@@ -10,13 +10,13 @@ import pytest
 import yaml
 from typer.testing import CliRunner, Result
 
+from gitwhy.check import CAPTURE_COMMAND
+from gitwhy.cli import app
+from gitwhy.config import enable_hook_check, load_config, project_config_path
+from gitwhy.gitio import commit_message, gitwhy_ids
+from gitwhy.hooks import PRE_COMMIT, managed_block
+from gitwhy.store import initialize
 from tests.conftest import plain
-from whyline.check import CAPTURE_COMMAND
-from whyline.cli import app
-from whyline.config import enable_hook_check, load_config, project_config_path
-from whyline.gitio import commit_message, whyline_ids
-from whyline.hooks import PRE_COMMIT, managed_block
-from whyline.store import initialize
 
 runner = CliRunner()
 VENV_BIN = str(Path(sys.executable).parent)
@@ -55,9 +55,9 @@ def _stage(repo: Path, name: str, lines: int) -> None:
 
 
 def _commit(
-    repo: Path, message: str, *extra: str, with_whyline: bool = True
+    repo: Path, message: str, *extra: str, with_gitwhy: bool = True
 ) -> subprocess.CompletedProcess[str]:
-    if with_whyline:
+    if with_gitwhy:
         path = VENV_BIN + os.pathsep + os.environ["PATH"]
     else:
         git_dir = str(Path(shutil.which("git") or "/usr/bin/git").parent)
@@ -98,7 +98,7 @@ def test_check_flag_installs_both_hooks_and_turns_it_on(
     assert "Turned on the pre-commit check" in text
     assert managed_block(PRE_COMMIT) in _pre_commit(repo).read_text(encoding="utf-8")
     config_text = project_config_path(repo).read_text(encoding="utf-8")
-    assert config_text.startswith("# Whyline project config.")  # comments survive
+    assert config_text.startswith("# Gitwhy project config.")  # comments survive
     assert yaml.safe_load(config_text) == {"schema_version": 1, "hooks": {"check": True}}
 
 
@@ -143,7 +143,7 @@ def test_uninstall_removes_both_blocks(repo: Path, monkeypatch: pytest.MonkeyPat
 @pytest.fixture
 def checked(repo: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     assert _cli(repo, monkeypatch, "install-hooks", "--check").exit_code == 0
-    _git(repo, "add", ".whyline")
+    _git(repo, "add", ".gitwhy")
     _git(repo, "commit", "-q", "-m", "turn on the check")
     return repo
 
@@ -166,7 +166,7 @@ def test_capture_pending_unblocks_and_links_the_commit(
     assert captured.exit_code == 0, captured.output
     completed = _commit(checked, "big, explained")
     assert completed.returncode == 0, completed.stderr
-    assert len(whyline_ids(commit_message("HEAD", checked), checked)) == 1
+    assert len(gitwhy_ids(commit_message("HEAD", checked), checked)) == 1
 
 
 def test_small_commit_passes(checked: Path) -> None:
@@ -193,11 +193,11 @@ def test_check_enabled_also_turns_the_hook_on(repo: Path, monkeypatch: pytest.Mo
     assert _commit(repo, "big").returncode != 0
 
 
-def test_commit_goes_through_when_whyline_is_missing(checked: Path) -> None:
+def test_commit_goes_through_when_gitwhy_is_missing(checked: Path) -> None:
     _stage(checked, "big.py", 40)
-    completed = _commit(checked, "big", with_whyline=False)
+    completed = _commit(checked, "big", with_gitwhy=False)
     assert completed.returncode == 0, completed.stderr
-    assert "whyline: not found on PATH; skipping whyline check" in completed.stderr
+    assert "gitwhy: not found on PATH; skipping gitwhy check" in completed.stderr
 
 
 def test_commit_goes_through_when_the_check_breaks(checked: Path) -> None:
@@ -205,7 +205,7 @@ def test_commit_goes_through_when_the_check_breaks(checked: Path) -> None:
     _stage(checked, "big.py", 40)
     completed = _commit(checked, "big")
     assert completed.returncode == 0, completed.stderr
-    assert "whyline: skipped the check" in completed.stderr
+    assert "gitwhy: skipped the check" in completed.stderr
 
 
 # --- the hook step and the config toggle directly ---------------------------------------------
@@ -225,7 +225,7 @@ def test_hook_step_never_blocks_on_its_own_failure(
     project_config_path(checked).write_text("check: [broken\n", encoding="utf-8")
     result = _cli(checked, monkeypatch, "hook", "pre-commit")
     assert result.exit_code == 0
-    assert "whyline: skipped the check" in plain(result.stderr)
+    assert "gitwhy: skipped the check" in plain(result.stderr)
 
 
 def test_hook_step_is_quiet_when_off(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,4 +1,4 @@
-"""``whyline why`` against real git histories (docs/02 section 4.4, docs/03 sections 4 and 7)."""
+"""``gitwhy why`` against real git histories (docs/02 section 4.4, docs/03 sections 4 and 7)."""
 
 import json
 import os
@@ -10,11 +10,11 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner, Result
 
+from gitwhy.cli import app
+from gitwhy.models import Record
+from gitwhy.render import BANNER_AFFIRMED, BANNER_DRAFT
+from gitwhy.store import RecordStore, initialize
 from tests.conftest import plain, record_data, uuid7
-from whyline.cli import app
-from whyline.models import Record
-from whyline.render import BANNER_AFFIRMED, BANNER_DRAFT
-from whyline.store import RecordStore, initialize
 
 runner = CliRunner()
 
@@ -38,7 +38,7 @@ def _commit(repo: Path, lines: list[str], message: str) -> str:
 
 def _save(repo: Path, n: int, **overrides: Any) -> Record:
     record = Record.model_validate(record_data(n, **overrides))
-    RecordStore(repo / ".whyline").save(record)
+    RecordStore(repo / ".gitwhy").save(record)
     return record
 
 
@@ -67,9 +67,9 @@ def history(repo: Path) -> dict[str, str]:
     _save(repo, 2, goal="Second version of line two")
     _save(repo, 3, goal="Third version of line two")
     shas = {
-        "c1": _commit(repo, ["a", "one", "c"], f"one\n\nWhyline-Id: {uuid7(1)}"),
-        "c2": _commit(repo, ["a", "two", "c"], f"two\n\nWhyline-Id: {uuid7(2)}"),
-        "c3": _commit(repo, ["a", "three", "c"], f"three\n\nWhyline-Id: {uuid7(3)}"),
+        "c1": _commit(repo, ["a", "one", "c"], f"one\n\nGitwhy-Id: {uuid7(1)}"),
+        "c2": _commit(repo, ["a", "two", "c"], f"two\n\nGitwhy-Id: {uuid7(2)}"),
+        "c3": _commit(repo, ["a", "three", "c"], f"three\n\nGitwhy-Id: {uuid7(3)}"),
     }
     return shas
 
@@ -91,8 +91,8 @@ def _json(result: Result) -> dict[str, Any]:
 def test_two_commits_drafts_newest_first(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _save(repo, 1, goal="Line two exists")
     _save(repo, 2, goal="Line two was changed")
-    c1 = _commit(repo, ["a", "one", "c"], f"one\n\nWhyline-Id: {uuid7(1)}")
-    c2 = _commit(repo, ["a", "two", "c"], f"two\n\nWhyline-Id: {uuid7(2)}")
+    c1 = _commit(repo, ["a", "one", "c"], f"one\n\nGitwhy-Id: {uuid7(1)}")
+    c2 = _commit(repo, ["a", "two", "c"], f"two\n\nGitwhy-Id: {uuid7(2)}")
     result = _why(repo, monkeypatch, "app.py:2")
     assert result.exit_code == 0, result.output
     text = result.stdout
@@ -107,8 +107,8 @@ def test_line_untouched_by_second_commit_shows_only_first(
 ) -> None:
     _save(repo, 1, goal="Line one")
     _save(repo, 2, goal="Only line two")
-    _commit(repo, ["a", "one", "c"], f"one\n\nWhyline-Id: {uuid7(1)}")
-    _commit(repo, ["a", "two", "c"], f"two\n\nWhyline-Id: {uuid7(2)}")
+    _commit(repo, ["a", "one", "c"], f"one\n\nGitwhy-Id: {uuid7(1)}")
+    _commit(repo, ["a", "two", "c"], f"two\n\nGitwhy-Id: {uuid7(2)}")
     result = _why(repo, monkeypatch, "app.py:1")
     assert "Line one" in result.stdout
     assert "Only line two" not in result.stdout
@@ -231,8 +231,8 @@ def test_record_linked_from_two_commits_is_listed_once_with_both(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _save(repo, 1, goal="One reason, two commits")
-    c1 = _commit(repo, ["a", "one"], f"one\n\nWhyline-Id: {uuid7(1)}")
-    c2 = _commit(repo, ["a", "two"], f"follow-up fix\n\nWhyline-Id: {uuid7(1)}")
+    c1 = _commit(repo, ["a", "one"], f"one\n\nGitwhy-Id: {uuid7(1)}")
+    c2 = _commit(repo, ["a", "two"], f"follow-up fix\n\nGitwhy-Id: {uuid7(1)}")
     data = _json(_why(repo, monkeypatch, "app.py:2", "--json"))
     (entry,) = data["records"]
     assert entry["resolved_commits"] == [c2, c1]
@@ -245,7 +245,7 @@ def test_record_found_by_trailer_and_link_is_listed_once(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _save(repo, 1, links=[{"path": "app.py", "start_line": 1, "end_line": 3}])
-    sha = _commit(repo, ["a", "b", "c"], f"one\n\nWhyline-Id: {uuid7(1)}")
+    sha = _commit(repo, ["a", "b", "c"], f"one\n\nGitwhy-Id: {uuid7(1)}")
     data = _json(_why(repo, monkeypatch, "app.py:2", "--json"))
     (entry,) = data["records"]
     assert entry["via_link"] is False
@@ -281,8 +281,8 @@ def test_trailer_without_record_file_warns_and_continues(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _save(repo, 1, goal="Still here")
-    _commit(repo, ["a", "one"], f"one\n\nWhyline-Id: {uuid7(1)}")
-    _commit(repo, ["a", "two"], f"two\n\nWhyline-Id: {uuid7(9)}")
+    _commit(repo, ["a", "one"], f"one\n\nGitwhy-Id: {uuid7(1)}")
+    _commit(repo, ["a", "two"], f"two\n\nGitwhy-Id: {uuid7(9)}")
     result = _why(repo, monkeypatch, "app.py:2")
     assert result.exit_code == 0
     assert f"record missing for id {uuid7(9)}" in plain(result.stderr)
@@ -294,8 +294,8 @@ def test_corrupt_record_warns_and_others_still_show(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _save(repo, 1, goal="Good one")
-    (repo / ".whyline" / "records" / f"{uuid7(2)}.yml").write_text("[broken\n", encoding="utf-8")
-    _commit(repo, ["a"], f"one\n\nWhyline-Id: {uuid7(1)}\nWhyline-Id: {uuid7(2)}")
+    (repo / ".gitwhy" / "records" / f"{uuid7(2)}.yml").write_text("[broken\n", encoding="utf-8")
+    _commit(repo, ["a"], f"one\n\nGitwhy-Id: {uuid7(1)}\nGitwhy-Id: {uuid7(2)}")
     result = _why(repo, monkeypatch, "app.py:1")
     assert result.exit_code == 0
     assert "Good one" in result.stdout
@@ -312,7 +312,7 @@ def test_shallow_clone_prints_a_hint(
     found: bool,
 ) -> None:
     """docs/05: a shallow clone may miss older records, so ``why`` prints a hint."""
-    _git(repo, "add", ".whyline")
+    _git(repo, "add", ".gitwhy")
     _git(repo, "commit", "-q", "-m", "Commit the records, as a real project does")
     clone = tmp_path / "shallow"
     subprocess.run(  # noqa: S603

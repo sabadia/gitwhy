@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
+from gitwhy.adapters.claude import STOP_COMMAND, claude_hook_snippet
+from gitwhy.cli import app
+from gitwhy.models import StoredRecord
+from gitwhy.store import PENDING_FILENAME, RecordStore, initialize
 from tests.conftest import plain
-from whyline.adapters.claude import STOP_COMMAND, claude_hook_snippet
-from whyline.cli import app
-from whyline.models import StoredRecord
-from whyline.store import PENDING_FILENAME, RecordStore, initialize
 
 runner = CliRunner()
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +45,7 @@ def _cli(cwd: Path, monkeypatch: pytest.MonkeyPatch, *args: str, stdin: str = ""
 
 
 def _records(repo: Path) -> list[StoredRecord]:
-    store = RecordStore(repo / ".whyline")
+    store = RecordStore(repo / ".gitwhy")
     if not store.records_dir.is_dir():
         return []
     listing = store.list()
@@ -257,17 +257,17 @@ def test_stop_hook_drafts_one_record_and_ignores_tempting_prose(
     assert record.assumptions == []
     assert record.falsifier == ""
     assert [link.path for link in record.links] == ["src/app.py"]
-    saved = next((repo / ".whyline" / "records").glob("*.yml")).read_text(encoding="utf-8")
+    saved = next((repo / ".gitwhy" / "records").glob("*.yml")).read_text(encoding="utf-8")
     assert "Redis" not in saved
     assert "contention" not in saved
     assert str(tmp_path) not in saved
-    pending = (repo / ".whyline" / PENDING_FILENAME).read_text(encoding="utf-8").strip()
+    pending = (repo / ".gitwhy" / PENDING_FILENAME).read_text(encoding="utf-8").strip()
     assert pending == str(record.id)
 
     again = _cli(repo, monkeypatch, "adapters", "claude-stop", stdin=_hook_input(session))
     assert again.exit_code == 0, again.output
     assert len(_records(repo)) == 1
-    assert (repo / ".whyline" / PENDING_FILENAME).read_text(encoding="utf-8").strip() == pending
+    assert (repo / ".gitwhy" / PENDING_FILENAME).read_text(encoding="utf-8").strip() == pending
 
 
 def test_stop_hook_links_staged_files_when_the_session_lists_none(
@@ -288,7 +288,7 @@ def test_stop_hook_writes_nothing_without_files_or_staged_paths(
     result = _cli(repo, monkeypatch, "adapters", "claude-stop", stdin=_hook_input(session))
     assert result.exit_code == 0, result.output
     assert _records(repo) == []
-    assert not (repo / ".whyline" / PENDING_FILENAME).exists()
+    assert not (repo / ".gitwhy" / PENDING_FILENAME).exists()
 
 
 def test_stop_hook_ignores_files_outside_the_repo(
@@ -300,7 +300,7 @@ def test_stop_hook_ignores_files_outside_the_repo(
     result = _cli(repo, monkeypatch, "adapters", "claude-stop", stdin=_hook_input(session))
     assert result.exit_code == 0, result.output
     assert _records(repo) == []
-    assert not (repo / ".whyline" / PENDING_FILENAME).exists()
+    assert not (repo / ".gitwhy" / PENDING_FILENAME).exists()
 
 
 def test_stop_hook_skips_a_session_with_no_user_message(
@@ -359,7 +359,7 @@ def test_uninitialized_repo_exits_0(
     session = _user_session(tmp_path, ["src/app.py"])
     result = _cli(git_repo, monkeypatch, "adapters", "claude-stop", stdin=_hook_input(session))
     assert result.exit_code == 0, result.output
-    assert not (git_repo / ".whyline").exists()
+    assert not (git_repo / ".gitwhy").exists()
 
 
 def test_not_a_git_repo_exits_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -368,10 +368,10 @@ def test_not_a_git_repo_exits_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     work.mkdir()
     result = _cli(work, monkeypatch, "adapters", "claude-stop", stdin=_hook_input(session))
     assert result.exit_code == 0, result.output
-    assert not (work / ".whyline").exists()
+    assert not (work / ".gitwhy").exists()
 
 
-def test_missing_whyline_on_path_exits_0() -> None:
+def test_missing_gitwhy_on_path_exits_0() -> None:
     inner = STOP_COMMAND.removeprefix("sh -c '").removesuffix("'")
     completed = subprocess.run(  # noqa: S603
         ["sh", "-c", inner],  # noqa: S607
@@ -391,14 +391,14 @@ def test_claude_stop_exits_0_when_the_hook_itself_raises(
     def boom(payload: str, *, cwd: Path | None = None) -> int:
         raise RuntimeError(f"{payload} {cwd}")
 
-    monkeypatch.setattr("whyline.adapters.claude_stop.run_stop_hook", boom)
+    monkeypatch.setattr("gitwhy.adapters.claude_stop.run_stop_hook", boom)
     result = _cli(tmp_path, monkeypatch, "adapters", "claude-stop", stdin="{}")
     assert result.exit_code == 0
 
 
 def test_plugin_matches_the_snippet_and_does_not_copy_the_skill() -> None:
     manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    assert manifest["name"] == "whyline"
+    assert manifest["name"] == "gitwhy"
     assert "does not affirm" in manifest["description"]
     assert manifest["author"] == {"name": "Mahamudul Hasan"}
     assert manifest["version"] == "0.1.0"

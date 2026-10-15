@@ -1,6 +1,6 @@
-# Contributing to Whyline
+# Contributing to Gitwhy
 
-Whyline is a local-first CLI. Contributions that keep the core path offline, small, and honest are welcome.
+Gitwhy is a local-first CLI. Contributions that keep the core path offline, small, and honest are welcome.
 
 ## Rules that are not optional
 
@@ -22,7 +22,7 @@ uv run mypy
 uv run pytest --cov
 ```
 
-CI fails if line coverage of `src/whyline` drops below 90% (`fail_under` in `pyproject.toml`).
+CI fails if line coverage of `src/gitwhy` drops below 90% (`fail_under` in `pyproject.toml`).
 Do not lower it.
 
 Tooling: uv, hatchling (build backend), ruff (lint and format, line length 100), mypy in strict mode
@@ -32,7 +32,7 @@ checker until ty is production-ready.
 ## JSON Schema
 
 `schema/record.schema.json` is generated from the `Record` model. After changing the model, run
-`uv run whyline schema > schema/record.schema.json` and commit the result. A test fails if the
+`uv run gitwhy schema > schema/record.schema.json` and commit the result. A test fails if the
 committed file is out of date.
 
 ## Roles and permissions
@@ -57,14 +57,14 @@ Enforced by repository rulesets committed in `.github/rulesets/` and by `.github
 ## Branches and issues
 
 - One issue per branch. Branch name: `type/short-slug`.
-- Every issue lives on the Whyline project board.
+- Every issue lives on the Gitwhy project board.
 - Move the card to In Progress when you start, In Review when the PR opens, Done when it merges.
 
 ## Dogfooding
 
-Non-trivial changes in this repo should carry a Whyline record. Capture a draft with `whyline capture`, mark it with `whyline link` or `--pending`, and commit `.whyline/records` with the change. A draft is fine. Do not affirm a record you did not actually decide. Leave `rejected`, `assumptions`, and `falsifier` empty unless a human supplied them.
+Non-trivial changes in this repo should carry a Gitwhy record. Capture a draft with `gitwhy capture`, mark it with `gitwhy link` or `--pending`, and commit `.gitwhy/records` with the change. A draft is fine. Do not affirm a record you did not actually decide. Leave `rejected`, `assumptions`, and `falsifier` empty unless a human supplied them.
 
-`whyline install-agent` installs this repo's own skill. Do not rewrite that copy. The text lives once in `skills/whyline/`.
+`gitwhy install-agent` installs this repo's own skill. Do not rewrite that copy. The text lives once in `skills/gitwhy/`.
 
 ## Reporting issues
 

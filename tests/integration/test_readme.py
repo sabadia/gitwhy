@@ -10,8 +10,8 @@ import pytest
 from typer.main import get_command
 from typer.testing import CliRunner
 
+from gitwhy.cli import app
 from tests.conftest import plain
-from whyline.cli import app
 
 runner = CliRunner()
 ROOT = Path(__file__).resolve().parents[2]
@@ -20,14 +20,14 @@ VENV_BIN = str(Path(sys.executable).parent)
 
 _REQUIRED = (
     "v0.1.0",
-    "git+https://github.com/sabadia/whyline",
-    "uv tool install whyline",
-    "whyline init",
-    "whyline capture",
-    "whyline link",
-    "git add .whyline",
+    "git+https://github.com/sabadia/gitwhy",
+    "uv tool install gitwhy",
+    "gitwhy init",
+    "gitwhy capture",
+    "gitwhy link",
+    "git add .gitwhy",
     "git commit",
-    "whyline why",
+    "gitwhy why",
     "docs/01-product-spec.md",
     "Apache",
     "No invented why",
@@ -88,7 +88,7 @@ def _git(repo: Path, *args: str, env: dict[str, str] | None = None) -> str:
 
 
 def test_help_that_omits_exit_codes_fails_the_check() -> None:
-    assert not _documents_exit("Print the installed whyline version.\n\n--help  Show this message.")
+    assert not _documents_exit("Print the installed gitwhy version.\n\n--help  Show this message.")
 
 
 def test_every_command_help_names_exit_codes() -> None:
@@ -117,13 +117,13 @@ def test_readme_has_install_quickstart_limits_and_a_short_quickstart() -> None:
     body = _quickstart_body(README)
     assert len(body.splitlines()) <= 30
     for step in (
-        "whyline init",
-        "whyline install-hooks",
-        "whyline capture",
-        "whyline link",
-        "git add .whyline",
+        "gitwhy init",
+        "gitwhy install-hooks",
+        "gitwhy capture",
+        "gitwhy link",
+        "git add .gitwhy",
         "git commit",
-        "whyline why",
+        "gitwhy why",
     ):
         assert step in body
 
@@ -150,7 +150,7 @@ def test_readme_quickstart_links_a_commit_and_why_prints_the_goal(
 
     linked = runner.invoke(app, ["link", record_id])
     assert linked.exit_code == 0, linked.output
-    _git(git_repo, "add", ".whyline")
+    _git(git_repo, "add", ".gitwhy")
     env = {**os.environ, "PATH": VENV_BIN + os.pathsep + os.environ["PATH"]}
     commit = subprocess.run(  # noqa: S603
         ["git", "-C", str(git_repo), "commit", "-q", "-m", "feat: close invoices once a day"],  # noqa: S607
@@ -161,7 +161,7 @@ def test_readme_quickstart_links_a_commit_and_why_prints_the_goal(
     )
     assert commit.returncode == 0, commit.stderr
     message = _git(git_repo, "log", "-1", "--format=%B")
-    assert f"Whyline-Id: {record_id}" in message
+    assert f"Gitwhy-Id: {record_id}" in message
 
     result = runner.invoke(app, ["why", "src/app.py:1"])
     assert result.exit_code == 0, result.output

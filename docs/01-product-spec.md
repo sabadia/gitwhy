@@ -1,6 +1,6 @@
 # 01 — Product specification
 
-**Product:** Whyline  
+**Product:** Gitwhy  
 **Status:** Locked for MVP  
 **Date:** 2026-10-15
 
@@ -26,11 +26,11 @@ Existing tools miss the hole:
 - Architectural Decision Records capture the why, but they are essays, written after the fact, and they rot. Agents asked to generate them invent plausible reasons.
 - Audit/provenance standards (ProvenanceCode, Decision Provenance Standard) target compliance. They are too heavy for a solo developer at 23:00.
 
-Whyline is the missing artifact: a small, structured, git-native record of intent, captured when the change is made, recalled at the line.
+Gitwhy is the missing artifact: a small, structured, git-native record of intent, captured when the change is made, recalled at the line.
 
 ## 2. Who it is for
 
-Primary (MVP must serve these people with no setup beyond install and `whyline init`):
+Primary (MVP must serve these people with no setup beyond install and `gitwhy init`):
 
 1. **The solo developer using coding agents.** Claude Code, Codex, Cursor, Aider, or similar. They want "why did I do this in March?" and they want the next agent session to stop re-deciding.
 2. **The reviewer on a small team.** They want to answer "should this exist?" in under a minute, not reconstruct it from a 400-line diff.
@@ -67,21 +67,21 @@ Not the target of v1: compliance officers, regulated enterprises that need signe
 
 In:
 
-- `whyline init` — create `.whyline/` and a schema version file.
-- `whyline capture` — write a record from flags, from a prompt (three questions), or from a session log path the user supplies.
-- `whyline affirm <id>` — human marks a draft as affirmed.
-- `whyline why <file:line>` — print the record(s) that explain that line.
-- `whyline why --commit <sha>` — print the record linked to a commit.
-- `whyline show <id>` — print one record.
-- `whyline list` — list records, filter by status, path, author.
-- `whyline check` — exit non-zero if the current change (staged diff, or a given commit range) has no record and exceeds a configurable line threshold.
-- `whyline install-hooks` / `uninstall-hooks` — install a `prepare-commit-msg` hook that adds the `Whyline-Id` trailer, and a `pre-commit` hook that runs `check` when configured.
-- `whyline link <id>` — attach a record id to the upcoming commit message as a trailer, or to an existing commit only with an explicit, warned amend path that refuses if the commit is pushed.
+- `gitwhy init` — create `.gitwhy/` and a schema version file.
+- `gitwhy capture` — write a record from flags, from a prompt (three questions), or from a session log path the user supplies.
+- `gitwhy affirm <id>` — human marks a draft as affirmed.
+- `gitwhy why <file:line>` — print the record(s) that explain that line.
+- `gitwhy why --commit <sha>` — print the record linked to a commit.
+- `gitwhy show <id>` — print one record.
+- `gitwhy list` — list records, filter by status, path, author.
+- `gitwhy check` — exit non-zero if the current change (staged diff, or a given commit range) has no record and exceeds a configurable line threshold.
+- `gitwhy install-hooks` / `uninstall-hooks` — install a `prepare-commit-msg` hook that adds the `Gitwhy-Id` trailer, and a `pre-commit` hook that runs `check` when configured.
+- `gitwhy link <id>` — attach a record id to the upcoming commit message as a trailer, or to an existing commit only with an explicit, warned amend path that refuses if the commit is pushed.
 - Claude Code hook adapter: a documented `.claude/settings.json` snippet and a script that, on Stop, drafts a record from the session if one is not present.
-- Portable Agent Skill at `skills/whyline/SKILL.md`, installed into the consumer project for Claude Code and for generic agents.
-- Local stdio MCP server (`whyline-mcp`) with tools for why, capture, list, show, check, and link. No affirm tool. Optional extra, not a core dependency.
-- `whyline install-agent` / `uninstall-agent` that drops the skill, the AGENTS.md snippet, and optionally hooks.
-- `templates/AGENTS.whyline.md` snippet any project can commit so every agent sees the rules.
+- Portable Agent Skill at `skills/gitwhy/SKILL.md`, installed into the consumer project for Claude Code and for generic agents.
+- Local stdio MCP server (`gitwhy-mcp`) with tools for why, capture, list, show, check, and link. No affirm tool. Optional extra, not a core dependency.
+- `gitwhy install-agent` / `uninstall-agent` that drops the skill, the AGENTS.md snippet, and optionally hooks.
+- `templates/AGENTS.gitwhy.md` snippet any project can commit so every agent sees the rules.
 - JSON Schema export of the record, committed in `schema/record.schema.json`, generated from the Pydantic model so they cannot drift.
 - Man-quality `--help` on every command.
 - README with a 60-second quickstart and a "use from a coding agent" section.
@@ -105,21 +105,21 @@ A developer should feel the product working in the first session. Measure:
 |---|---|
 | Time to first record, no agent | Under 60 seconds from `uv tool install` equivalent / `pipx` to a committed record |
 | Time to first record, with agent hook | Zero extra prompts if the session log has a user goal; otherwise one prompt |
-| `whyline why file:line` latency | Under 100 ms on a repo with 10,000 commits and 1,000 records, warm filesystem |
+| `gitwhy why file:line` latency | Under 100 ms on a repo with 10,000 commits and 1,000 records, warm filesystem |
 | Record size | Median under 40 lines of YAML |
 | False certainty | Zero. Draft records always rendered with a `DRAFT` banner |
 | Core path network calls | Zero |
-| Agent install | `whyline install-agent` on a consumer repo leaves a working skill and an AGENTS.md block; a second run does not duplicate them |
-| Agent recall | An agent following the skill can answer "why does line N exist?" by running `whyline why` or the MCP tool, with the draft/affirmed banner intact |
+| Agent install | `gitwhy install-agent` on a consumer repo leaves a working skill and an AGENTS.md block; a second run does not duplicate them |
+| Agent recall | An agent following the skill can answer "why does line N exist?" by running `gitwhy why` or the MCP tool, with the draft/affirmed banner intact |
 
-Adoption signal (not a launch blocker, but the reason to exist): a developer runs `whyline why` on their own code at least once in the week after install, without being told to.
+Adoption signal (not a launch blocker, but the reason to exist): a developer runs `gitwhy why` on their own code at least once in the week after install, without being told to.
 
 ## 7. Non-goals
 
-- Whyline is not a code reviewer. It does not say whether the code is correct.
-- Whyline is not a memory product for chat. It does not store conversation transcripts. A session log is an input to capture, not a stored artifact (unless the user explicitly passes `--keep-source`).
-- Whyline is not an ADR replacement for architecture. It is the change-level record. A team may still keep ADRs. Whyline can reference one in the `links` field.
-- Whyline does not decide what "good" intent is. It stores what the author declared and shows the gaps.
+- Gitwhy is not a code reviewer. It does not say whether the code is correct.
+- Gitwhy is not a memory product for chat. It does not store conversation transcripts. A session log is an input to capture, not a stored artifact (unless the user explicitly passes `--keep-source`).
+- Gitwhy is not an ADR replacement for architecture. It is the change-level record. A team may still keep ADRs. Gitwhy can reference one in the `links` field.
+- Gitwhy does not decide what "good" intent is. It stores what the author declared and shows the gaps.
 
 ## 8. Business shape
 
@@ -127,8 +127,8 @@ This is an open-source developer tool, Apache-2.0, distributed as a Python packa
 
 - v1 value is the CLI. Free, local, no account.
 - Future revenue, not designed now: a hosted team layer (shared affirmation policy, PR app, audit export) that reads the same files. The file format must stay open so the CLI is useful forever without that layer.
-- Distribution: PyPI as `whyline`, installable with `uv tool install whyline` and `pipx install whyline`. Homebrew and a single binary are post-v1.
-- The repo itself dogfoods Whyline once `capture` works.
+- Distribution: PyPI as `gitwhy`, installable with `uv tool install gitwhy` and `pipx install gitwhy`. Homebrew and a single binary are post-v1.
+- The repo itself dogfoods Gitwhy once `capture` works.
 
 No pricing, no accounts, no telemetry in v1. If telemetry is ever proposed, it is opt-in, documented, and a separate issue. Default is off, and v1 ships with none.
 
@@ -138,7 +138,7 @@ State these in the README and do not break them:
 
 1. Your reasons stay in your repo. We do not receive them.
 2. A draft is a claim. An affirmed record is a human saying "this is the reason."
-3. Uninstalling the hooks leaves your records in place. Deleting `.whyline/` deletes them, and git history still has the old commits.
+3. Uninstalling the hooks leaves your records in place. Deleting `.gitwhy/` deletes them, and git history still has the old commits.
 4. The tool will not invent a reason to fill a gap.
 
 ## 10. Glossary
@@ -148,7 +148,7 @@ State these in the README and do not break them:
 | Record | One YAML document describing the intent of a change |
 | Draft | A record not yet affirmed by a human |
 | Affirmed | A human-confirmed record |
-| Trailer | The `Whyline-Id: <id>` line in a commit message footer |
+| Trailer | The `Gitwhy-Id: <id>` line in a commit message footer |
 | Hunk link | A path plus optional line range inside a record, pointing at the lines the record explains |
 | Falsifier | The observation that would prove the decision wrong |
 | Capture | Creating a record |

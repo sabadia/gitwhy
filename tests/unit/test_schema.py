@@ -9,13 +9,13 @@ import yaml
 from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
+from gitwhy.cli import app
+from gitwhy.models import Record, record_json_schema, render_record_json_schema
 from tests.conftest import doc_yaml_block, record_data
-from whyline.cli import app
-from whyline.models import Record, record_json_schema, render_record_json_schema
 
 ROOT = Path(__file__).resolve().parents[2]
 COMMITTED = ROOT / "schema" / "record.schema.json"
-REGENERATE = "uv run whyline schema > schema/record.schema.json"
+REGENERATE = "uv run gitwhy schema > schema/record.schema.json"
 
 
 @pytest.fixture(scope="module")

@@ -1,8 +1,8 @@
-# Whyline
+# Gitwhy
 
 Git-native intent ledger. Capture why a change exists, and get it back when you review, debug, or hand the repo to an agent.
 
-Code is cheap to write. Understanding it is not. The reason for a change dies in a chat or a head, reviewers reverse-engineer a clean diff, and the next session invents a history that was never true. Whyline stores a small structured record next to the code, links it to the commit, and returns it at a file and line.
+Code is cheap to write. Understanding it is not. The reason for a change dies in a chat or a head, reviewers reverse-engineer a clean diff, and the next session invents a history that was never true. Gitwhy stores a small structured record next to the code, links it to the commit, and returns it at a file and line.
 
 **Status:** specification complete, implementation not started. This repository is the product.
 
@@ -10,7 +10,7 @@ Code is cheap to write. Understanding it is not. The reason for a change dies in
 
 - No invented why. Empty fields stay empty. Agents draft; humans affirm.
 - Local-first. No account, no server, no API key on the core path.
-- Git is the bus. The record is YAML in `.whyline/records`. The link is a `Whyline-Id` trailer.
+- Git is the bus. The record is YAML in `.gitwhy/records`. The link is a `Gitwhy-Id` trailer.
 - Small records. A screen, not an essay.
 
 ## Docs

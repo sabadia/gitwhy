@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from whyline.config import load_config, project_config_path, read_config_file, user_config_path
-from whyline.errors import CorruptError, SchemaVersionError
-from whyline.models import Config, utc_now
+from gitwhy.config import load_config, project_config_path, read_config_file, user_config_path
+from gitwhy.errors import CorruptError, SchemaVersionError
+from gitwhy.models import Config, utc_now
 
 
 def _write(path: Path, text: str) -> Path:
@@ -90,13 +90,13 @@ def test_newer_config_schema_exits_6(tmp_path: Path) -> None:
 
 
 def test_user_config_path_resolution(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    assert user_config_path({"WHYLINE_CONFIG_HOME": "/w"}) == Path("/w/config.yml")
-    assert user_config_path({"XDG_CONFIG_HOME": "/x"}) == Path("/x/whyline/config.yml")
-    assert user_config_path({"WHYLINE_CONFIG_HOME": "/w", "XDG_CONFIG_HOME": "/x"}) == Path(
+    assert user_config_path({"GITWHY_CONFIG_HOME": "/w"}) == Path("/w/config.yml")
+    assert user_config_path({"XDG_CONFIG_HOME": "/x"}) == Path("/x/gitwhy/config.yml")
+    assert user_config_path({"GITWHY_CONFIG_HOME": "/w", "XDG_CONFIG_HOME": "/x"}) == Path(
         "/w/config.yml"
     )
     monkeypatch.setenv("HOME", str(tmp_path))
-    assert user_config_path({}) == tmp_path / ".config" / "whyline" / "config.yml"
+    assert user_config_path({}) == tmp_path / ".config" / "gitwhy" / "config.yml"
 
 
 def test_default_user_config_path_uses_environment(isolated_user_config: Path) -> None:

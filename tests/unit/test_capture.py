@@ -5,8 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import uuid7
-from whyline.capture import (
+from gitwhy.capture import (
     FALSIFIER_QUESTION,
     GOAL_QUESTION,
     REJECTED_QUESTION,
@@ -19,7 +18,8 @@ from whyline.capture import (
     prompt_missing,
     resolve_files,
 )
-from whyline.errors import AffirmRefusedError, ExitCode, UsageError
+from gitwhy.errors import AffirmRefusedError, ExitCode, UsageError
+from tests.conftest import uuid7
 
 NOW = datetime(2026, 10, 15, 13, 4, 11, tzinfo=UTC)
 ROOT = Path("/repo")
@@ -203,7 +203,7 @@ def test_capture_affirm_gate_runs_before_the_store_is_touched(tmp_path: Path) ->
             cwd=tmp_path,
             affirm=_request(interactive=False),
         )
-    assert not (tmp_path / ".whyline").exists()
+    assert not (tmp_path / ".gitwhy").exists()
 
 
 # --- interactive questions ----------------------------------------------------------------

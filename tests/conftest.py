@@ -10,8 +10,8 @@ from uuid import UUID
 
 import pytest
 
-from whyline.models import Record
-from whyline.store import RECORDS_DIRNAME, WHYLINE_DIRNAME, RecordStore
+from gitwhy.models import Record
+from gitwhy.store import GITWHY_DIRNAME, RECORDS_DIRNAME, RecordStore
 
 MakeRecord = Callable[..., Record]
 
@@ -81,17 +81,17 @@ def make_record() -> MakeRecord:
 
 
 @pytest.fixture
-def whyline_dir(tmp_path: Path) -> Path:
-    """An initialized ``.whyline`` directory (records dir present) inside ``tmp_path``."""
-    path = tmp_path / WHYLINE_DIRNAME
+def gitwhy_dir(tmp_path: Path) -> Path:
+    """An initialized ``.gitwhy`` directory (records dir present) inside ``tmp_path``."""
+    path = tmp_path / GITWHY_DIRNAME
     (path / RECORDS_DIRNAME).mkdir(parents=True)
     return path
 
 
 @pytest.fixture
-def store(whyline_dir: Path) -> RecordStore:
-    """A store over an initialized ``.whyline`` directory."""
-    return RecordStore(whyline_dir)
+def store(gitwhy_dir: Path) -> RecordStore:
+    """A store over an initialized ``.gitwhy`` directory."""
+    return RecordStore(gitwhy_dir)
 
 
 @pytest.fixture
@@ -109,5 +109,5 @@ def isolated_user_config(
 ) -> Path:
     """Point the user config at an empty temp dir so tests never read the real ~/.config."""
     home = tmp_path_factory.mktemp("config-home")
-    monkeypatch.setenv("WHYLINE_CONFIG_HOME", str(home))
+    monkeypatch.setenv("GITWHY_CONFIG_HOME", str(home))
     return home

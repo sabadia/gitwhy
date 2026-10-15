@@ -1,4 +1,4 @@
-"""``whyline check`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
+"""``gitwhy check`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
 
 import json
 import subprocess
@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
+from gitwhy.check import CAPTURE_COMMAND
+from gitwhy.cli import app
+from gitwhy.errors import UsageError
+from gitwhy.gitio import range_record_ids
+from gitwhy.store import initialize, write_pending
 from tests.conftest import plain, uuid7
-from whyline.check import CAPTURE_COMMAND
-from whyline.cli import app
-from whyline.errors import UsageError
-from whyline.gitio import range_record_ids
-from whyline.store import initialize, write_pending
 
 runner = CliRunner()
 
@@ -46,7 +46,7 @@ def repo(git_repo: Path) -> Path:
     _git(git_repo, "config", "commit.gpgsign", "false")
     initialize(git_repo)
     _stage(git_repo, "README.md", 1)
-    _git(git_repo, "add", ".whyline")
+    _git(git_repo, "add", ".gitwhy")
     _commit(git_repo, "base")
     return git_repo
 
@@ -81,7 +81,7 @@ def test_over_min_lines_with_pending_id_exits_0(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _stage(repo, "big.py", 40)
-    write_pending(repo / ".whyline", uuid7(1))
+    write_pending(repo / ".gitwhy", uuid7(1))
     result = _check(repo, monkeypatch)
     assert result.exit_code == 0, result.output
     assert f"linked to record {uuid7(1)}" in plain(result.stdout)
@@ -103,7 +103,7 @@ def test_ignored_files_exit_0(repo: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_head_with_trailer_counts_as_linked(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _stage(repo, "a.py", 1)
-    _commit(repo, f"linked\n\nWhyline-Id: {uuid7(2)}")
+    _commit(repo, f"linked\n\nGitwhy-Id: {uuid7(2)}")
     _stage(repo, "big.py", 40)
     result = _check(repo, monkeypatch)
     assert result.exit_code == 0
@@ -113,7 +113,7 @@ def test_head_with_trailer_counts_as_linked(repo: Path, monkeypatch: pytest.Monk
 def test_range_with_a_linked_commit_exits_0(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     base = _git(repo, "rev-parse", "HEAD")
     _stage(repo, "big.py", 40)
-    _commit(repo, f"big\n\nWhyline-Id: {uuid7(3)}")
+    _commit(repo, f"big\n\nGitwhy-Id: {uuid7(3)}")
     _stage(repo, "more.py", 40)
     _commit(repo, "more, no trailer")
     result = _check(repo, monkeypatch, "--range", f"{base}..HEAD")
@@ -145,13 +145,13 @@ def test_min_lines_flag_overrides_config(repo: Path, monkeypatch: pytest.MonkeyP
 
 
 def test_project_config_threshold(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    (repo / ".whyline" / "config.yml").write_text("check:\n  min_lines: 100\n", encoding="utf-8")
+    (repo / ".gitwhy" / "config.yml").write_text("check:\n  min_lines: 100\n", encoding="utf-8")
     _stage(repo, "big.py", 40)
     assert _check(repo, monkeypatch).exit_code == 0
 
 
 def test_project_config_ignore_list(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    (repo / ".whyline" / "config.yml").write_text(
+    (repo / ".gitwhy" / "config.yml").write_text(
         "check:\n  ignore: ['vendor/**']\n", encoding="utf-8"
     )
     _stage(repo, "vendor/lib.py", 400)
@@ -190,7 +190,7 @@ def test_check_never_modifies_the_repository(repo: Path, monkeypatch: pytest.Mon
     _check(repo, monkeypatch, "--json")
     assert (_git(repo, "status", "--porcelain=v1"), _git(repo, "rev-parse", "HEAD")) == before
     assert (repo / ".git" / "index").read_bytes() == index_before
-    assert not (repo / ".whyline" / "pending").exists()
+    assert not (repo / ".gitwhy" / "pending").exists()
 
 
 def test_binary_and_renamed_files(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
