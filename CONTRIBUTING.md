@@ -62,7 +62,9 @@ Enforced by repository rulesets committed in `.github/rulesets/` and by `.github
 
 ## Dogfooding
 
-Once `whyline capture` works, non-trivial changes in this repo should carry a Whyline record. A draft is fine. Do not affirm a record you did not actually decide.
+Non-trivial changes in this repo should carry a Whyline record. Capture a draft with `whyline capture`, mark it with `whyline link` or `--pending`, and commit `.whyline/records` with the change. A draft is fine. Do not affirm a record you did not actually decide. Leave `rejected`, `assumptions`, and `falsifier` empty unless a human supplied them.
+
+`whyline install-agent` installs this repo's own skill. Do not rewrite that copy. The text lives once in `skills/whyline/`.
 
 ## Reporting issues
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- This repo dogfoods Whyline: `.whyline/records` holds a draft for the contributing practice, the installed skill, and the guard test. `whyline install-agent` has been run here. CONTRIBUTING states the practice. Records stay drafts, with `rejected`, `assumptions`, and `falsifier` empty.
 - Product README: install from git until PyPI (not published yet), a quickstart (init, hooks, capture, link, commit, why), and the accepted limits (remote-tracking amend check, aborted commits, shallow clones, submodules, deleted files, empty repos, concurrent capture, secrets). Every command's `--help` names its exit codes.
 - Docs for coding agents: README section "Use from a coding agent", and `docs/adapters/other-agents.md` for Codex, Cursor, Copilot, and the shell fallback. `docs/adapters/claude-code.md` now leads with install, MCP, then the Stop hook.
 - `whyline adapters claude` prints a Claude Code Stop hook, and `--write` merges it into `.claude/settings.json` without changing other keys. `whyline adapters claude-stop` reads `transcript_path` from the hook's stdin and writes one draft when the session lists files or something is staged and `.whyline/pending` is empty. It never affirms, and it exits 0 when whyline or the session file is missing. `templates/claude-plugin/` is a hook-only plugin. The skill stays the one copy from `whyline install-agent`.
