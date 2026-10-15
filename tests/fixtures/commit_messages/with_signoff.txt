@@ -1,0 +1,7 @@
+Fix rounding in totals
+
+Use Decimal end to end.
+
+Signed-off-by: Ada Lovelace <ada@example.com>
+Whyline-Id: 01932a7e-5b1c-7c3a-8f21-000000000002
+Co-authored-by: Grace Hopper <grace@example.com>
