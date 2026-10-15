@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01a140ae-d7a0-76bb-9ab8-5ccfe64d7361
+status: draft
+created_at: '2026-10-15T17:49:22Z'
+updated_at: '2026-10-15T17:49:22Z'
+affirmed_at: null
+affirmed_by: null
+author:
+  kind: agent
+  name: null
+  tool: grok
+goal: Fail when this repo has fewer than three records, a rewritten skill, or a CONTRIBUTING file that drops the practice.
+constraints: []
+rejected: []
+assumptions: []
+falsifier: ''
+evidence: []
+links:
+- path: tests/unit/test_dogfood.py
+  start_line: null
+  end_line: null
+adr: null
+risks: []
+source:
+  kind: flags
+  ref: null
