@@ -79,3 +79,11 @@ dev = [
     "types-jsonschema>=4.26.0.20261006",
     "types-pyyaml>=6.0.12.20260906",
 ]
+
+[tool.coverage.run]
+source = ["whyline"]
+
+[tool.coverage.report]
+# docs/05 section 1: CI fails below 90% line coverage. Never lower this.
+fail_under = 90
+show_missing = true

@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CI fails when line coverage of `src/whyline` drops below 90%.
 - Project board type field is named `Work Type`; GitHub reserves `Type`.
 
 [Unreleased]: https://github.com/sabadia/whyline/commits/main
