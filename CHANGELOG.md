@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `why` on 1,000 records stays under the 100 ms budget. Parsing every record took 728 ms, so a record file is parsed only when its text mentions the path. Local `why_line` median was 75 ms and 84 ms on two runs. The timing test is opt-in (`WHYLINE_BENCH=1`) and is not a CI gate. A fresh process is slower: interpreter startup alone (`whyline version`) is about 117 ms.
 - This repo dogfoods Whyline: `.whyline/records` holds a draft for the contributing practice, the installed skill, and the guard test. `whyline install-agent` has been run here. CONTRIBUTING states the practice. Records stay drafts, with `rejected`, `assumptions`, and `falsifier` empty.
 - Product README: install from git until PyPI (not published yet), a quickstart (init, hooks, capture, link, commit, why), and the accepted limits (remote-tracking amend check, aborted commits, shallow clones, submodules, deleted files, empty repos, concurrent capture, secrets). Every command's `--help` names its exit codes.
 - Docs for coding agents: README section "Use from a coding agent", and `docs/adapters/other-agents.md` for Codex, Cursor, Copilot, and the shell fallback. `docs/adapters/claude-code.md` now leads with install, MCP, then the Stop hook.

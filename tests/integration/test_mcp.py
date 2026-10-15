@@ -404,7 +404,10 @@ def test_why_warnings_for_missing_and_skipped(repo: Path, monkeypatch: pytest.Mo
     (repo / "app.py").write_text("a\nb\n", encoding="utf-8")
     _git(repo, "add", "app.py")
     _git(repo, "commit", "-q", "-m", f"start\n\nWhyline-Id: {uuid7(9)}")
-    (repo / ".whyline" / "records" / f"{uuid7(2)}.yml").write_text("[broken\n", encoding="utf-8")
+    # why parses a record only when the file text mentions the path.
+    (repo / ".whyline" / "records" / f"{uuid7(2)}.yml").write_text(
+        "[broken\npath: app.py\n", encoding="utf-8"
+    )
 
     async def body() -> None:
         async with Client(build_server()) as client:
