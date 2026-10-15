@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `whyline capture --session PATH` takes the goal from a session log's first user message (plain text, a JSON message list, or JSONL such as a Claude Code transcript) and links a top-level `files` list if present. Nothing else is read from the session: rejected alternatives, assumptions, and the falsifier stay empty, session captures are always drafts, and only the file name of a session outside the repository is recorded.
 - Git trailer helper (`whyline.gitio`): reads `Whyline-Id` trailers and adds one through `git interpret-trailers`, alongside `Signed-off-by` and other trailers, never replacing an existing link.
 - `whyline link <id>` marks a record for the next commit via `.whyline/pending`; `--amend-head` adds the `Whyline-Id` trailer to HEAD's message instead, refusing (exit 7) when HEAD is already on a remote-tracking branch, detached, or mid-merge/rebase, and never replacing an existing link.
+- `whyline install-hooks` / `uninstall-hooks`: a `prepare-commit-msg` hook that adds `Whyline-Id` from `.whyline/pending` and clears it. It never blocks a commit, never overwrites a foreign hook (exit 5, prints the lines to add), writes nothing when `core.hooksPath` is set (exit 5), and uninstall removes only whyline's marked block.
 
 ### Fixed
 

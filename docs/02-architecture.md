@@ -108,7 +108,9 @@ whyline/
 │   ├── capture.py
 │   ├── recall.py
 │   ├── check.py
-│   ├── hooks.py
+│   ├── hooks/                      # whyline.hooks: installer + prepare-commit-msg step
+│   │   ├── __init__.py
+│   │   └── prepare-commit-msg.sh   # managed block installed into .git/hooks
 │   ├── render.py
 │   ├── errors.py
 │   ├── adapters/

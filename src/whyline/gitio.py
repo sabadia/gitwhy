@@ -163,6 +163,15 @@ def _run_git(
     )
 
 
+def git_path(name: str, root: Path) -> Path:
+    """Return ``git rev-parse --git-path <name>`` as an absolute path (worktree-aware)."""
+    completed = _run_git(["rev-parse", "--git-path", name], root)
+    if completed.returncode != 0:
+        raise NoRepoError(f"Not inside a git repository: {root}.")
+    path = Path(completed.stdout.strip())
+    return path if path.is_absolute() else root / path
+
+
 def head_commit(cwd: Path) -> str | None:
     """Return the full sha of HEAD, or None if the branch has no commits yet."""
     completed = _run_git(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"], cwd)
@@ -206,11 +215,7 @@ _IN_PROGRESS_MARKERS = (
 def operation_in_progress(cwd: Path) -> str | None:
     """Return a description of an unfinished merge, rebase, etc., or None if there is none."""
     for marker, description in _IN_PROGRESS_MARKERS:
-        completed = _run_git(["rev-parse", "--git-path", marker], cwd)
-        path = Path(completed.stdout.strip())
-        if not path.is_absolute():
-            path = cwd / path
-        if completed.returncode == 0 and path.exists():
+        if git_path(marker, cwd).exists():
             return description
     return None
 
