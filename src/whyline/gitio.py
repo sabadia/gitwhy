@@ -318,3 +318,76 @@ def commit_links(root: Path, rev: str) -> CommitLinks | None:
 def is_shallow(root: Path) -> bool:
     """Return True for a shallow clone, where history (and so recall) may be incomplete."""
     return _run_git(["rev-parse", "--is-shallow-repository"], root).stdout.strip() == "true"
+
+
+# --- change size for `whyline check` (docs/02 section 4.5) ------------------------------------
+
+
+@dataclass(frozen=True)
+class FileChange:
+    """Lines added and deleted in one file. Binary files count as zero lines."""
+
+    path: str
+    added: int
+    deleted: int
+    binary: bool = False
+
+    @property
+    def lines(self) -> int:
+        """Added plus deleted lines."""
+        return self.added + self.deleted
+
+
+def _parse_numstat(output: str) -> list[FileChange]:
+    """Parse ``git diff --numstat -z``. A rename is ``A\tD\t\0old\0new\0``."""
+    changes: list[FileChange] = []
+    tokens = output.split("\0")
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        index += 1
+        if not token:
+            continue
+        added, deleted, path = token.split("\t", 2)
+        if not path:  # rename or copy: the next two tokens are the old and new paths
+            path = tokens[index + 1]
+            index += 2
+        binary = added == "-" or deleted == "-"
+        changes.append(
+            FileChange(
+                path=path,
+                added=0 if binary else int(added),
+                deleted=0 if binary else int(deleted),
+                binary=binary,
+            )
+        )
+    return changes
+
+
+def diff_numstat(root: Path, rev_range: str | None = None) -> list[FileChange]:
+    """Return per-file line counts for the staged diff, or for ``rev_range`` (``A..B``)."""
+    target = ["--cached"] if rev_range is None else [rev_range]
+    completed = _run_git(["diff", "--numstat", "-z", "-M", *target, "--"], root)
+    if completed.returncode != 0:
+        raise UsageError(
+            f"git diff failed for {rev_range or 'the staged changes'}: "
+            f"{completed.stderr.strip() or 'unknown error'}.",
+            hint="Pass a range such as main..HEAD.",
+        )
+    return _parse_numstat(completed.stdout)
+
+
+def range_record_ids(root: Path, rev_range: str) -> list[UUID]:
+    """Return the ``Whyline-Id`` values of every commit in ``rev_range``, without repeats."""
+    completed = _run_git(["log", "--no-patch", f"--format={_TRAILER_FORMAT}", rev_range], root)
+    if completed.returncode != 0:
+        raise UsageError(
+            f"git log failed for {rev_range}: {completed.stderr.strip() or 'unknown error'}.",
+            hint="Pass a range such as main..HEAD.",
+        )
+    ids: list[UUID] = []
+    for commit in _parse_commit_links(completed.stdout):
+        for record_id in commit.record_ids:
+            if record_id not in ids:
+                ids.append(record_id)
+    return ids
