@@ -20,7 +20,8 @@ from whyline import __version__
 from whyline.affirm import affirm_record, require_human, resolve_affirmer
 from whyline.capture import AffirmRequest, CaptureInput, linked_files, prompt_missing
 from whyline.capture import capture as run_capture
-from whyline.errors import ExitCode, HookConflictError, WhylineError
+from whyline.check import CAPTURE_COMMAND, Verdict, run_check
+from whyline.errors import CheckFailedError, ExitCode, HookConflictError, WhylineError
 from whyline.errors import UsageError as WhylineUsageError
 from whyline.gitio import repo_root
 from whyline.hooks import (
@@ -757,3 +758,62 @@ def _report_recall_warnings(result: RecallResult) -> None:
         typer.echo(f"warning: record missing for id {record_id}", err=True)
     for error in result.skipped:
         typer.echo(f"warning: {error}", err=True)
+
+
+@app.command()
+def check(
+    rev_range: Annotated[
+        str | None,
+        typer.Option(
+            "--range", metavar="REVSPEC", help="Check a commit range (e.g. main..HEAD) instead."
+        ),
+    ] = None,
+    min_lines: Annotated[
+        int | None,
+        typer.Option("--min-lines", help="Override check.min_lines from config (default 30)."),
+    ] = None,
+    json_output: JsonOption = False,
+) -> None:
+    """Fail when a large change has no record. Never modifies the repository.
+
+    Counts added plus deleted lines in the staged diff (or --range), leaving out files matched
+    by check.ignore in config (lockfiles, .whyline/**, generated files by default). A change
+    under the threshold passes. A larger one passes only if a record is linked: an id in
+    .whyline/pending, or a Whyline-Id trailer on HEAD (or on any commit in --range).
+
+    Exits 0 when the change passes, 1 for a bad --range or --min-lines, 2 outside an
+    initialized repository, 3 when the change needs a record, and 4 for a corrupt config.
+    """
+    root = repo_root(Path.cwd())
+    result = run_check(root, rev_range=rev_range, min_lines=min_lines)
+    scope = rev_range or "staged changes"
+    if json_output:
+        emit_json(
+            {
+                "ok": result.ok,
+                "verdict": result.verdict.value,
+                "scope": scope,
+                "changed_lines": result.changed_lines,
+                "min_lines": result.min_lines,
+                "files": result.counted,
+                "ignored": result.ignored,
+                "linked_ids": [str(record_id) for record_id in result.linked_ids],
+            }
+        )
+    elif result.verdict is Verdict.UNDER_THRESHOLD:
+        typer.echo(
+            f"OK: {result.changed_lines} changed lines in {scope}, under the "
+            f"{result.min_lines}-line threshold."
+        )
+    elif result.verdict is Verdict.LINKED:
+        typer.echo(
+            f"OK: {result.changed_lines} changed lines in {scope}, linked to record "
+            f"{result.linked_ids[0]}."
+        )
+    if not result.ok:
+        files = len(result.counted)
+        raise CheckFailedError(
+            f"{result.changed_lines} changed lines in {files} file{'s' if files != 1 else ''} "
+            f"({scope}) reach the {result.min_lines}-line threshold, and no record is linked.",
+            hint=f"Run: {CAPTURE_COMMAND}",
+        )

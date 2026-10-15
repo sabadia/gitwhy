@@ -175,9 +175,9 @@ No network. No index daemon. If this is slow, the optimization is a local cache 
 
 `whyline check` (and the optional pre-commit hook):
 
-1. Compute staged diff stat (or the range given).
-2. If total added+deleted lines `< config.check.min_lines` (default 30), exit 0.
-3. If every changed file is matched by `config.check.ignore` globs (default: lockfiles, generated, `.whyline/**`), exit 0.
+1. Compute staged diff stat (or the range given, which must be `A..B` or `A...B`).
+2. Leave out files matched by `config.check.ignore` globs (default: lockfiles, generated, `.whyline/**`). A pattern without `/` also matches the file name in any directory. Binary files count as zero lines.
+3. If the remaining added+deleted lines are `< config.check.min_lines` (default 30), exit 0. This also covers a change made only of ignored files, and keeps a large lockfile from failing a small code change.
 4. If a pending id exists, or HEAD / the commit range already has a `Whyline-Id`, exit 0.
 5. Otherwise exit 3 and print the exact command to capture.
 
