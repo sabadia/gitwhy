@@ -79,11 +79,16 @@ Create or confirm these fields. Status already exists; rename options to match.
 |---|---|---|
 | Status | single select | Backlog, Ready, In Progress, In Review, Done, Blocked |
 | Phase | single select | 0, 1, 2, 3, 4, 5 |
-| Type | single select | feat, fix, docs, chore, test |
+| Work Type | single select | feat, fix, docs, chore, test |
 | Priority | single select | P0, P1, P2, P3 |
 | Area | single select | meta, core, cli, hooks, docs |
 
-Add a Board view grouped by Status, and a Table view grouped by Phase.
+GitHub reserves the project field name `Type` (it collides with built-in issue types), so the
+type field is named **Work Type**. Everywhere this doc or the roadmap says "Type" for a board
+field, use `Work Type`. The `type-*` labels keep their names.
+
+Add a Board view grouped by Status, and a Table view grouped by Phase. The GraphQL API can create
+views and set visible fields but not grouping; set grouping once in the web UI.
 
 If a GraphQL field-create call is fiddly, use `gh project field-create` (available in current gh). Look up the current `gh project --help` and use it. Do not fall back to a spreadsheet.
 
@@ -121,7 +126,7 @@ Then add it to the project and set fields:
 
 ```bash
 gh project item-add PROJECT_NUMBER --owner "$OWNER" --url ISSUE_URL
-# then gh project item-edit to set Status=Backlog, Phase=0, Type, Priority, Area
+# then gh project item-edit to set Status=Backlog, Phase=0, Work Type, Priority, Area
 ```
 
 Look up the exact `gh project item-edit` syntax for this `gh` version. Set every field. An issue not on the board is incomplete.

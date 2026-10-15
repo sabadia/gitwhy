@@ -10,3 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Product specification, architecture, schema contract, roadmap, quality bar, agent integration contract, and Claude Code operating manual.
+
+### Changed
+
+- Project board type field is named `Work Type`; GitHub reserves `Type`.
