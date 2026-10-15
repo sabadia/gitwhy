@@ -16,9 +16,10 @@ from typer._click.exceptions import ClickException, UsageError
 from typer.core import TyperGroup
 
 from whyline import __version__
+from whyline.affirm import affirm_record, require_human, resolve_affirmer
 from whyline.errors import ExitCode, WhylineError
 from whyline.gitio import repo_root
-from whyline.models import render_record_json_schema
+from whyline.models import render_record_json_schema, utc_now
 from whyline.render import filter_records, render_list_line, render_record
 from whyline.store import WHYLINE_DIRNAME, RecordStore, initialize
 
@@ -252,3 +253,67 @@ def list_records(
     else:
         for record in records:
             typer.echo(render_list_line(record))
+
+
+def _confirm_empty_fields(fields: list[str]) -> bool:
+    typer.echo(f"These fields are empty: {', '.join(fields)}.", err=True)
+    return typer.confirm("Affirm anyway?", default=False, err=True)
+
+
+@app.command()
+def affirm(
+    record_id: Annotated[str, typer.Argument(metavar="ID", help="Id of the draft to affirm.")],
+    by: Annotated[
+        str | None,
+        typer.Option("--by", help="Who is affirming. Defaults to git config user.name."),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Affirm even if narrative fields are empty, without asking."),
+    ] = False,
+    i_am_human: Annotated[
+        bool,
+        typer.Option(
+            "--i-am-human",
+            help="Allow affirming from a non-interactive shell. Only a human may pass this.",
+        ),
+    ] = False,
+    json_output: JsonOption = False,
+) -> None:
+    """Mark a draft record as affirmed: a human saying "this is the reason".
+
+    Affirming is a human decision. It is refused (exit 8) when stdin is not a terminal,
+    unless you pass --i-am-human; you are lying if you pass it and are not a human. Coding
+    agents must never affirm. If optional fields are empty, you are asked to confirm;
+    --yes skips that question but never skips the human gate. Fields are never filled in.
+
+    Exits 1 on bad input or a declined confirmation, 2 outside an initialized repository,
+    4 for a corrupt record, 8 when the human gate refuses, and 9 for an unknown id.
+    """
+    interactive = stdin_is_tty()
+    require_human(interactive=interactive, i_am_human=i_am_human)
+    root, store = open_store()
+    outcome = affirm_record(
+        store,
+        record_id,
+        by=resolve_affirmer(by, root),
+        interactive=interactive,
+        i_am_human=i_am_human,
+        yes=yes,
+        confirm=_confirm_empty_fields,
+        now=utc_now(),
+    )
+    record = outcome.record
+    if outcome.empty_fields and not interactive:
+        typer.echo(
+            f"Warning: affirmed with empty fields: {', '.join(outcome.empty_fields)}.", err=True
+        )
+    if json_output:
+        emit_json(record.model_dump(mode="json"))
+    elif outcome.already_affirmed:
+        when = record.affirmed_at.isoformat().replace("+00:00", "Z") if record.affirmed_at else "?"
+        typer.echo(
+            f"{record.id} is already affirmed by {record.affirmed_by} at {when}. Nothing changed."
+        )
+    else:
+        typer.echo(f"Affirmed {record.id} by {record.affirmed_by}.")
