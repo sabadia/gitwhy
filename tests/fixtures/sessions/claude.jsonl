@@ -1,0 +1,5 @@
+{"type": "summary", "summary": "Previous session"}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "no text here"}]}}
+{"type": "user", "message": {"role": "user", "content": "Make the daily close idempotent"}, "cwd": "/home/someone/repo"}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "We rejected a lock table because of contention. Assumption: one close per day. This would be wrong if two closes run concurrently. Constraint: keep the API shape."}]}}
+{"files": ["src/billing/close.py"]}
