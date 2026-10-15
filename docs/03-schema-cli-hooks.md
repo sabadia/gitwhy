@@ -275,7 +275,7 @@ Full contract: `docs/07-agent-integrations.md`. Implement that document. Summary
 
 ### `whyline adapters claude`
 
-Prints, and with `--write` writes, a Claude Code hook snippet. The Stop hook drafts a record from the session. It never affirms. It exits 0 on its own failure. Session file path comes from current Claude Code docs, not from memory.
+Prints, and with `--write` writes, a Claude Code hook snippet. The Stop hook drafts a record from the session. It never affirms. It exits 0 on its own failure. The session file is `transcript_path` on the hook's stdin (https://code.claude.com/docs/en/hooks). Whyline does not guess a path under `~/.claude/projects`.
 
 ### `whyline install-agent` / `whyline uninstall-agent`
 
@@ -291,12 +291,12 @@ Console script, stdio only, optional extra `whyline[mcp]`. Tools: `whyline_why`,
 
 ## 7. Claude Code adapter details
 
-Ship `src/whyline/adapters/claude.py` and a template the command writes.
+Ship `src/whyline/adapters/claude.py` (snippet, merge, and draft) and `src/whyline/adapters/claude_stop.py` (stdin entry, always exit 0). The hook-only plugin template is `templates/claude-plugin/`. It does not copy the skill.
 
 `whyline adapters claude` prints, and with `--write` writes, a snippet the user can merge into `.claude/settings.json`:
 
-- A `Stop` hook that runs `whyline capture --session <transcript> --pending --agent-tool claude-code` only if the session touched files and no pending id exists.
-- The transcript path must come from Claude Code's documented session file location at implementation time. Look up the current docs (`code.claude.com/docs`) when you build this. Do not guess a path. If the path is not stable, the command prints manual instructions and does not write a broken hook.
+- A `Stop` hook that runs `whyline adapters claude-stop`. That command reads `transcript_path` from the hook payload on stdin and drafts one record when the session lists files inside the repository or something is staged, and `.whyline/pending` is empty. It never affirms.
+- Claude Code documents `transcript_path` on every hook payload (https://code.claude.com/docs/en/hooks). The directory under `~/.claude/projects` is not stable, so the snippet does not hardcode it. If whyline is not on PATH, the hook command exits 0.
 
 The adapter script must:
 

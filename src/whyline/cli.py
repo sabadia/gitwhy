@@ -17,6 +17,8 @@ from typer._click.exceptions import ClickException, UsageError
 from typer.core import TyperGroup
 
 from whyline import __version__
+from whyline.adapters.claude import HOOK_NOTE, claude_hook_snippet, write_claude_settings
+from whyline.adapters.claude_stop import main as run_claude_stop
 from whyline.adapters.skill import (
     AgentInstallPlan,
     CopyStatus,
@@ -842,6 +844,60 @@ def _display_path(path: Path, root: Path) -> str:
         return path.relative_to(root).as_posix()
     except ValueError:
         return str(path)
+
+
+adapters_app = typer.Typer(
+    cls=WhylineGroup,
+    help="Print or install config for a coding agent.",
+    no_args_is_help=True,
+)
+app.add_typer(adapters_app, name="adapters")
+
+
+@adapters_app.command("claude")
+def adapters_claude(
+    write: Annotated[
+        bool,
+        typer.Option("--write", help="Merge the snippet into .claude/settings.json in this repo."),
+    ] = False,
+) -> None:
+    """Print a Claude Code Stop hook, or merge it into this repository with --write.
+
+    The hook runs `whyline adapters claude-stop`. Claude Code passes the session
+    file as transcript_path on the hook's stdin (code.claude.com/docs/en/hooks).
+    The hook writes one draft when that file exists, the session lists files or
+    something is staged, and .whyline/pending is empty. It never affirms. If
+    whyline is not on PATH, the hook exits 0.
+
+    --write creates .claude/settings.json when it is missing, and leaves every
+    other key alone. A second run does not add a second hook. It refuses to
+    change a file that is not a JSON object.
+
+    Exits 2 when --write is used outside a git repository, and 4 when
+    .claude/settings.json is not usable JSON. Printing the snippet exits 0
+    anywhere.
+    """
+    if write:
+        root = repo_root(Path.cwd())
+        path = root / ".claude" / "settings.json"
+        shown = _display_path(path, root)
+        if write_claude_settings(root):
+            typer.echo(f"Wrote {shown}.")
+        else:
+            typer.echo(f"{shown} already has the Stop hook. Nothing changed.")
+    else:
+        typer.echo(json.dumps(claude_hook_snippet(), indent=2))
+    typer.echo(HOOK_NOTE, err=True, nl=False)
+
+
+@adapters_app.command("claude-stop")
+def adapters_claude_stop() -> None:
+    """Called by the Claude Code Stop hook. Always exits 0. Never affirms.
+
+    Reads the hook payload on stdin. A missing session file, a missing whyline
+    init, or any other failure writes nothing and still exits 0.
+    """
+    run_claude_stop()
 
 
 hook_app = typer.Typer(help="Entry points called by installed git hooks.", hidden=True)

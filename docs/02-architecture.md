@@ -54,7 +54,7 @@ flowchart LR
 | `whyline.recall` | Resolve file:line or sha to records | No |
 | `whyline.check` | Decide if a change is missing a record | No |
 | `whyline.hooks` | Install/remove git hooks, render hook scripts | No |
-| `whyline.adapters.claude` | Emit Claude Code hook config and a capture script | No |
+| `whyline.adapters.claude` | Emit the Stop hook and draft from stdin `transcript_path` | No |
 | `whyline.adapters.skill` | Render and install the portable skill and AGENTS.md snippet | No |
 | `whyline.mcp` | Optional stdio MCP server. Imports CLI/store. Not imported by core | No |
 | `whyline.errors` | Exception hierarchy and exit codes | No |
