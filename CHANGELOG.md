@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `whyline affirm <id>` marks a draft as affirmed. It is refused (exit 8) from a non-interactive shell unless `--i-am-human` is passed; empty narrative fields need confirmation on a terminal (`--yes` skips it) and are never filled in. `--by` defaults to git `user.name`.
 - `whyline capture` (flags mode) writes a draft record from `--goal` and the other docs/03 flags, linked to the staged files or `--file` paths. Fields you leave out stay empty; `--pending` marks the id in `.whyline/pending` for the next commit.
 - `whyline capture --affirm` lets a human affirm in the same step, through the same human gate as `whyline affirm` (`--i-am-human`, `--yes`); a refusal or a declined confirmation writes nothing.
+- Interactive `whyline capture`: without `--goal` on a terminal it asks what the change is for (required), what was rejected (optional), and what would prove it wrong (optional), skipping questions whose flags were given. Without a terminal it exits 1 and asks for flags.
 
 ### Fixed
 

@@ -46,6 +46,47 @@ class CaptureInput:
     source_ref: str | None = None
 
 
+GOAL_QUESTION = "What is this change for?"
+REJECTED_QUESTION = "What did you consider and reject? (optional, press Enter to skip)"
+FALSIFIER_QUESTION = "What would prove this wrong? (optional, press Enter to skip)"
+
+Ask = Callable[[str, bool], str]
+"""Ask one question and return the answer. The bool says whether an answer is required."""
+
+
+def prompt_missing(inp: CaptureInput, ask: Ask) -> CaptureInput:
+    """Ask the three capture questions (docs/03 section 4) for fields that are still missing.
+
+    1. The goal, if empty. Required: asked again until the answer is not blank.
+    2. A rejected alternative, unless ``--rejected`` supplied one. Optional.
+    3. A falsifier, unless one was supplied. Optional.
+
+    Answers are stored exactly as typed. A blank optional answer leaves the field empty, and
+    nothing else is asked. If any question was asked, ``source_kind`` becomes ``"prompt"``.
+    """
+    changes: dict[str, Any] = {}
+    asked = False
+    if not inp.goal.strip():
+        answer = ""
+        while not answer.strip():
+            answer = ask(GOAL_QUESTION, True)
+        changes["goal"] = answer
+        asked = True
+    if not inp.rejected:
+        answer = ask(REJECTED_QUESTION, False)
+        asked = True
+        if answer.strip():
+            changes["rejected"] = (answer,)
+    if not inp.falsifier.strip():
+        answer = ask(FALSIFIER_QUESTION, False)
+        asked = True
+        if answer.strip():
+            changes["falsifier"] = answer
+    if asked:
+        changes["source_kind"] = "prompt"
+    return replace(inp, **changes)
+
+
 @dataclass(frozen=True)
 class AffirmRequest:
     """Affirm the record in the same step it is captured (``capture --affirm``).
@@ -166,6 +207,23 @@ def build_record(
         raise UsageError(f"Cannot capture this record: {describe_validation_error(exc)}.") from exc
 
 
+def linked_files(inp: CaptureInput, *, root: Path, cwd: Path) -> list[str]:
+    """Check that capture can run, and return the paths the record will link.
+
+    Raises before anything is written: not initialized (exit 2), a path outside the repository,
+    or nothing staged and no files given (exit 1). Interactive capture calls this before asking
+    any question, so nobody answers three questions only to be told nothing is staged.
+    """
+    RecordStore(root / WHYLINE_DIRNAME).require_initialized()
+    files = resolve_files(inp.files, cwd=cwd, root=root) if inp.files else staged_paths(root)
+    if not files:
+        raise UsageError(
+            "Nothing is staged and no --file was given, so the record would not point at any code.",
+            hint="Stage your changes with `git add`, or pass --file PATH.",
+        )
+    return files
+
+
 def capture(
     inp: CaptureInput,
     *,
@@ -187,13 +245,7 @@ def capture(
     if affirm is not None:
         require_human(interactive=affirm.interactive, i_am_human=affirm.i_am_human)
     store = RecordStore(root / WHYLINE_DIRNAME)
-    store.require_initialized()
-    files = resolve_files(inp.files, cwd=cwd, root=root) if inp.files else staged_paths(root)
-    if not files:
-        raise UsageError(
-            "Nothing is staged and no --file was given, so the record would not point at any code.",
-            hint="Stage your changes with `git add`, or pass --file PATH.",
-        )
+    files = linked_files(inp, root=root, cwd=cwd)
     if inp.author_name is None:
         inp = replace(inp, author_name=load_config(root).capture.default_author_name)
     record = build_record(

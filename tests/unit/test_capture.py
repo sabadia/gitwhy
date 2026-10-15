@@ -7,12 +7,16 @@ import pytest
 
 from tests.conftest import uuid7
 from whyline.capture import (
+    FALSIFIER_QUESTION,
+    GOAL_QUESTION,
+    REJECTED_QUESTION,
     AffirmRequest,
     CaptureInput,
     build_record,
     capture,
     new_record_id,
     pair_rejected,
+    prompt_missing,
     resolve_files,
 )
 from whyline.errors import AffirmRefusedError, ExitCode, UsageError
@@ -200,3 +204,58 @@ def test_capture_affirm_gate_runs_before_the_store_is_touched(tmp_path: Path) ->
             affirm=_request(interactive=False),
         )
     assert not (tmp_path / ".whyline").exists()
+
+
+# --- interactive questions ----------------------------------------------------------------
+
+
+class _Asker:
+    """Answers questions from a script and records what was asked."""
+
+    def __init__(self, *answers: str) -> None:
+        self.answers = list(answers)
+        self.asked: list[tuple[str, bool]] = []
+
+    def __call__(self, question: str, required: bool) -> str:
+        self.asked.append((question, required))
+        return self.answers.pop(0)
+
+
+def test_prompt_missing_asks_three_questions_in_order() -> None:
+    ask = _Asker("goal", "rejected thing", "falsifier text")
+    result = prompt_missing(CaptureInput(goal=""), ask)
+    assert ask.asked == [
+        (GOAL_QUESTION, True),
+        (REJECTED_QUESTION, False),
+        (FALSIFIER_QUESTION, False),
+    ]
+    assert result.goal == "goal"
+    assert result.rejected == ("rejected thing",)
+    assert result.falsifier == "falsifier text"
+    assert result.source_kind == "prompt"
+
+
+def test_prompt_missing_reasks_blank_goal_and_keeps_text_exactly() -> None:
+    ask = _Asker("", "  ", "  padded goal ", "", "")
+    result = prompt_missing(CaptureInput(goal=""), ask)
+    assert [q for q, _ in ask.asked].count(GOAL_QUESTION) == 3
+    assert result.goal == "  padded goal "
+    assert result.rejected == ()
+    assert result.falsifier == ""
+
+
+def test_prompt_missing_skips_supplied_fields() -> None:
+    ask = _Asker()
+    inp = CaptureInput(goal="g", rejected=("r",), falsifier="f")
+    result = prompt_missing(inp, ask)
+    assert ask.asked == []
+    assert result == inp
+    assert result.source_kind == "flags"
+
+
+def test_prompt_missing_with_goal_from_elsewhere_asks_only_optional() -> None:
+    ask = _Asker("", "")
+    result = prompt_missing(CaptureInput(goal="from a session"), ask)
+    assert [q for q, _ in ask.asked] == [REJECTED_QUESTION, FALSIFIER_QUESTION]
+    assert result.goal == "from a session"
+    assert result.source_kind == "prompt"
