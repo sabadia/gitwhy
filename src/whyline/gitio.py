@@ -3,10 +3,14 @@
 import shutil
 import subprocess
 from pathlib import Path
+from uuid import UUID
 
 from whyline.errors import NoRepoError, UsageError
 
 WHYLINE_PREFIX = ".whyline/"
+
+TRAILER_KEY = "Whyline-Id"
+"""Commit trailer linking a commit to a record (docs/03 section 5). The only trailer v1 writes."""
 
 
 def _git_executable() -> str:
@@ -76,3 +80,68 @@ def staged_paths(root: Path) -> list[str]:
         for name in names.split("\0")
         if name and name != WHYLINE_PREFIX.rstrip("/") and not name.startswith(WHYLINE_PREFIX)
     ]
+
+
+# --- commit message trailers (docs/03 section 5) ------------------------------------------------
+
+
+def _interpret_trailers(args: list[str], message: str, cwd: Path) -> str:
+    """Run ``git interpret-trailers`` on ``message`` (stdin) and return its stdout."""
+    completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, local git only
+        [_git_executable(), "interpret-trailers", *args],
+        cwd=cwd,
+        input=message,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise UsageError(
+            f"git interpret-trailers failed: {completed.stderr.strip() or 'unknown error'}."
+        )
+    return completed.stdout
+
+
+def parse_trailers(message: str, cwd: Path) -> list[tuple[str, str]]:
+    """Return the ``(key, value)`` trailers git finds in ``message``, in order.
+
+    Only the trailer block at the end of the message counts; a ``Key: value`` line in the body
+    is not a trailer. Folded values are unfolded.
+    """
+    trailers: list[tuple[str, str]] = []
+    for line in _interpret_trailers(["--parse"], message, cwd).splitlines():
+        key, sep, value = line.partition(":")
+        if sep:
+            trailers.append((key.strip(), value.strip()))
+    return trailers
+
+
+def whyline_ids(message: str, cwd: Path) -> list[UUID]:
+    """Return the record ids in ``message``'s ``Whyline-Id`` trailers, in order, without repeats.
+
+    The key matches case-insensitively, as git does. Values that are not UUIDs are skipped:
+    a malformed trailer links to nothing rather than failing the caller.
+    """
+    ids: list[UUID] = []
+    for key, value in parse_trailers(message, cwd):
+        if key.lower() != TRAILER_KEY.lower():
+            continue
+        try:
+            record_id = UUID(value)
+        except ValueError:
+            continue
+        if record_id not in ids:
+            ids.append(record_id)
+    return ids
+
+
+def add_whyline_trailer(message: str, record_id: UUID, cwd: Path) -> str:
+    """Return ``message`` with a ``Whyline-Id: <record_id>`` trailer.
+
+    Git places it in the trailer block (after a blank line, before comment lines). If the
+    message already has any ``Whyline-Id`` trailer, it is returned unchanged: one commit links
+    one record, and an existing link is never replaced.
+    """
+    return _interpret_trailers(
+        ["--if-exists", "doNothing", "--trailer", f"{TRAILER_KEY}: {record_id}"], message, cwd
+    )
