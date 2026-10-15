@@ -15,7 +15,15 @@ from datetime import UTC, datetime
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Annotated, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 from pydantic.types import UUID7
 
 SCHEMA_VERSION = 1
@@ -27,6 +35,16 @@ EvidenceKind = Literal["test", "command", "note"]
 SourceKind = Literal["prompt", "flags", "session", "import"]
 
 UtcDatetime = Annotated[AwareDatetime, Field(description="RFC3339 timestamp, stored in UTC")]
+
+
+def _reject_bool(value: object) -> object:
+    # Literal[1] would otherwise accept True, because True == 1 in Python.
+    if isinstance(value, bool):
+        raise ValueError("schema_version must be an integer")
+    return value
+
+
+SchemaVersion = Annotated[Literal[1], BeforeValidator(_reject_bool)]
 
 _WRITE = ConfigDict(extra="forbid")
 _READ = ConfigDict(extra="allow")
@@ -176,7 +194,7 @@ class _RecordBase[
 ](BaseModel):
     """Fields of a record, in the order of docs/03 section 1."""
 
-    schema_version: Literal[1]
+    schema_version: SchemaVersion
     id: UUID7
     status: RecordStatus
     created_at: UtcDatetime
@@ -277,7 +295,7 @@ class Config(BaseModel):
 
     model_config = _WRITE
 
-    schema_version: Literal[1] = 1
+    schema_version: SchemaVersion = 1
     check: CheckConfig = Field(default_factory=CheckConfig)
     hooks: HooksConfig = Field(default_factory=HooksConfig)
     capture: CaptureConfig = Field(default_factory=CaptureConfig)
