@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from gitwhy.errors import NotFoundError, UsageError
-from gitwhy.session import (
+from intentline.errors import NotFoundError, UsageError
+from intentline.session import (
     GOAL_MAX_LENGTH,
     SessionFacts,
     parse_session,

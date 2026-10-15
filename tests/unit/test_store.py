@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from gitwhy.errors import CorruptError, ExitCode, NoRepoError, NotFoundError, UsageError
-from gitwhy.models import Link, Record
-from gitwhy.store import RecordStore, dump_yaml
+from intentline.errors import CorruptError, ExitCode, NoRepoError, NotFoundError, UsageError
+from intentline.models import Link, Record
+from intentline.store import RecordStore, dump_yaml
 from tests.conftest import MakeRecord, record_data, uuid7
 
 
@@ -99,11 +99,11 @@ def test_save_rejects_link_escaping_repo(store: RecordStore, make_record: MakeRe
 
 
 def test_save_requires_init(tmp_path: Path, make_record: MakeRecord) -> None:
-    store = RecordStore(tmp_path / ".gitwhy")
-    with pytest.raises(NoRepoError, match="gitwhy init") as excinfo:
+    store = RecordStore(tmp_path / ".intentline")
+    with pytest.raises(NoRepoError, match="intentline init") as excinfo:
         store.save(make_record())
     assert excinfo.value.exit_code == ExitCode.NO_REPO
-    assert not (tmp_path / ".gitwhy").exists()
+    assert not (tmp_path / ".intentline").exists()
 
 
 def test_failed_write_keeps_original_and_cleans_up(
@@ -140,7 +140,7 @@ def test_load_rejects_malformed_id(store: RecordStore, bad_id: str) -> None:
 
 def test_load_requires_init(tmp_path: Path) -> None:
     with pytest.raises(NoRepoError):
-        RecordStore(tmp_path / ".gitwhy").load(uuid7(1))
+        RecordStore(tmp_path / ".intentline").load(uuid7(1))
 
 
 @pytest.mark.parametrize(
@@ -157,8 +157,8 @@ def test_load_corrupt_file_fails_cleanly(store: RecordStore, text: str, match: s
     with pytest.raises(CorruptError, match=match) as excinfo:
         store.load(uuid7(1))
     assert excinfo.value.exit_code == ExitCode.CORRUPT
-    assert f".gitwhy/records/{uuid7(1)}.yml" in str(excinfo.value)
-    assert "gitwhy capture" in str(excinfo.value)
+    assert f".intentline/records/{uuid7(1)}.yml" in str(excinfo.value)
+    assert "intentline capture" in str(excinfo.value)
 
 
 def test_load_rejects_link_escaping_repo_on_disk(store: RecordStore) -> None:
@@ -236,11 +236,11 @@ def test_list_empty_store(store: RecordStore) -> None:
 
 def test_list_requires_init(tmp_path: Path) -> None:
     with pytest.raises(NoRepoError):
-        RecordStore(tmp_path / ".gitwhy").list()
+        RecordStore(tmp_path / ".intentline").list()
 
 
 def test_display_falls_back_to_absolute_path(tmp_path: Path) -> None:
-    store = RecordStore(tmp_path / ".gitwhy")
+    store = RecordStore(tmp_path / ".intentline")
     outside = Path("/somewhere/else.yml")
     assert store._display(outside) == str(outside)
 

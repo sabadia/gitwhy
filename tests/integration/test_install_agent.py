@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.adapters.skill import (
+from intentline.adapters.skill import (
     MARKER_FILENAME,
     PROJECT_SKILL_DIRS,
     _dir_if_skill,
@@ -18,12 +18,12 @@ from gitwhy.adapters.skill import (
     install_agents_file,
     mcp_text,
 )
-from gitwhy.adapters.skill import (
+from intentline.adapters.skill import (
     user_skill_dir as home_skill_dir,
 )
-from gitwhy.cli import app
-from gitwhy.errors import CorruptError
-from gitwhy.hooks import BEGIN_MARKER, END_MARKER
+from intentline.cli import app
+from intentline.errors import CorruptError
+from intentline.hooks import BEGIN_MARKER, END_MARKER
 from tests.conftest import plain
 
 runner = CliRunner()
@@ -42,8 +42,8 @@ def _git(repo: Path, *args: str) -> None:
 @pytest.fixture(autouse=True)
 def claude_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Keep ``--claude`` off the real home directory."""
-    dest = tmp_path / "claude-home" / ".claude" / "skills" / "gitwhy"
-    monkeypatch.setattr("gitwhy.adapters.skill.user_skill_dir", lambda: dest)
+    dest = tmp_path / "claude-home" / ".claude" / "skills" / "intentline"
+    monkeypatch.setattr("intentline.adapters.skill.user_skill_dir", lambda: dest)
     return dest
 
 
@@ -60,14 +60,14 @@ def _cli(repo: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> Result:
 
 
 def test_template_is_short_and_states_the_rules() -> None:
-    text = (ROOT / "templates" / "AGENTS.gitwhy.md").read_text(encoding="utf-8")
+    text = (ROOT / "templates" / "AGENTS.intentline.md").read_text(encoding="utf-8")
     assert len(text.splitlines()) <= 40
-    assert "gitwhy why path/to/file.py:88" in text
-    assert 'gitwhy capture --goal "..." --pending' in text
-    assert "gitwhy check" in text
+    assert "intentline why path/to/file.py:88" in text
+    assert 'intentline capture --goal "..." --pending' in text
+    assert "intentline check" in text
     assert "Do not invent a why" in text
-    assert "gitwhy affirm" in text
-    assert ".agents/skills/gitwhy/SKILL.md" in text
+    assert "intentline affirm" in text
+    assert ".agents/skills/intentline/SKILL.md" in text
     assert BEGIN_MARKER not in text
 
 
@@ -99,21 +99,22 @@ def test_default_install_is_idempotent_and_uninstall_keeps_user_text(
     assert (repo / "AGENTS.md").read_text(encoding="utf-8").count(BEGIN_MARKER) == 1
     assert "Nothing changed" in second.stdout
 
-    notes = repo / ".agents" / "skills" / "gitwhy" / "notes.md"
+    notes = repo / ".agents" / "skills" / "intentline" / "notes.md"
     notes.write_text("user note\n", encoding="utf-8")
-    (repo / ".claude" / "skills" / "gitwhy" / "SKILL.md").write_text("edited\n", encoding="utf-8")
+    edited = repo / ".claude" / "skills" / "intentline" / "SKILL.md"
+    edited.write_text("edited\n", encoding="utf-8")
     refreshed = _cli(repo, monkeypatch, "install-agent")
     assert refreshed.exit_code == 0, refreshed.output
-    assert "Updated skill: .claude/skills/gitwhy" in refreshed.stdout
-    installed = (repo / ".claude" / "skills" / "gitwhy" / "SKILL.md").read_text(encoding="utf-8")
-    assert installed == (ROOT / "skills" / "gitwhy" / "SKILL.md").read_text(encoding="utf-8")
+    assert "Updated skill: .claude/skills/intentline" in refreshed.stdout
+    installed = edited.read_text(encoding="utf-8")
+    assert installed == (ROOT / "skills" / "intentline" / "SKILL.md").read_text(encoding="utf-8")
 
     removed = _cli(repo, monkeypatch, "uninstall-agent")
     assert removed.exit_code == 0, removed.output
     left = (repo / "AGENTS.md").read_text(encoding="utf-8")
     assert BEGIN_MARKER not in left
     assert "Keep this." in left
-    assert not (repo / ".claude" / "skills" / "gitwhy").exists()
+    assert not (repo / ".claude" / "skills" / "intentline").exists()
     assert notes.is_file()
     assert notes.read_text(encoding="utf-8") == "user note\n"
     assert "prepare-commit-msg" not in removed.stdout
@@ -130,7 +131,7 @@ def test_flags_select_one_piece(
 
     skill_only = _cli(repo, monkeypatch, "install-agent", "--skill")
     assert skill_only.exit_code == 0, skill_only.output
-    assert (repo / ".github" / "skills" / "gitwhy" / "SKILL.md").is_file()
+    assert (repo / ".github" / "skills" / "intentline" / "SKILL.md").is_file()
     assert not (repo / "AGENTS.md").exists()
     assert "mcpServers" not in skill_only.stdout
 
@@ -152,7 +153,7 @@ def test_uninstall_removes_a_file_that_held_only_the_block(
     result = _cli(repo, monkeypatch, "uninstall-agent")
     assert result.exit_code == 0, result.output
     assert not (repo / "AGENTS.md").exists()
-    assert "held only gitwhy's block" in result.stdout
+    assert "held only intentline's block" in result.stdout
     again = _cli(repo, monkeypatch, "uninstall-agent")
     assert again.exit_code == 0, again.output
     assert "Nothing changed" in again.stdout
@@ -170,12 +171,12 @@ def test_hooks_flag_installs_and_uninstalls_the_commit_hook(
     assert second.exit_code == 0, second.output
     assert "already installed" in second.stdout
 
-    text = hook.read_text(encoding="utf-8").replace("gitwhy hook", "gitwhy HOOK", 1)
+    text = hook.read_text(encoding="utf-8").replace("intentline hook", "intentline HOOK", 1)
     hook.write_text(text, encoding="utf-8")
     updated = _cli(repo, monkeypatch, "install-agent", "--hooks")
     assert updated.exit_code == 0, updated.output
-    assert "Updated gitwhy's block" in updated.stdout
-    assert "gitwhy hook" in hook.read_text(encoding="utf-8")
+    assert "Updated intentline's block" in updated.stdout
+    assert "intentline hook" in hook.read_text(encoding="utf-8")
 
     hook.write_text(hook.read_text(encoding="utf-8") + "\n# user hook line\n", encoding="utf-8")
     removed = _cli(repo, monkeypatch, "uninstall-agent")
@@ -192,9 +193,9 @@ def test_hooks_flag_refuses_a_foreign_hook(repo: Path, monkeypatch: pytest.Monke
     hook.write_text("#!/bin/sh\necho foreign\n", encoding="utf-8")
     result = _cli(repo, monkeypatch, "install-agent", "--skill", "--hooks")
     assert result.exit_code == 5, result.output
-    assert "not managed by gitwhy" in plain(result.stderr)
+    assert "not managed by intentline" in plain(result.stderr)
     assert hook.read_text(encoding="utf-8") == "#!/bin/sh\necho foreign\n"
-    assert (repo / ".agents" / "skills" / "gitwhy" / "SKILL.md").is_file()
+    assert (repo / ".agents" / "skills" / "intentline" / "SKILL.md").is_file()
 
 
 def test_hooks_flag_refuses_when_hooks_path_is_set(
@@ -217,9 +218,9 @@ def test_install_agent_outside_a_repo_exits_2(
 
 def test_missing_skill_bundle_exits_4(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def missing() -> Path:
-        raise CorruptError("The gitwhy skill is missing from this installation.")
+        raise CorruptError("The intentline skill is missing from this installation.")
 
-    monkeypatch.setattr("gitwhy.adapters.skill.bundled_skill_dir", missing)
+    monkeypatch.setattr("intentline.adapters.skill.bundled_skill_dir", missing)
     result = _cli(repo, monkeypatch, "install-agent", "--skill")
     assert result.exit_code == 4, result.output
     assert "missing from this installation" in plain(result.output)
@@ -239,8 +240,8 @@ def test_help_lists_flags_and_exit_codes() -> None:
 
 
 def test_bundle_lookup_and_agents_refresh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    assert bundled_skill_dir() == ROOT / "skills" / "gitwhy"
-    assert agents_template_text() == (ROOT / "templates" / "AGENTS.gitwhy.md").read_text(
+    assert bundled_skill_dir() == ROOT / "skills" / "intentline"
+    assert agents_template_text() == (ROOT / "templates" / "AGENTS.intentline.md").read_text(
         encoding="utf-8"
     )
     empty = tmp_path / "empty"
@@ -250,11 +251,11 @@ def test_bundle_lookup_and_agents_refresh(tmp_path: Path, monkeypatch: pytest.Mo
     (tmp_path / "SKILL.md").write_text("x\n", encoding="utf-8")
     assert _dir_if_skill(tmp_path) == tmp_path
 
-    monkeypatch.setattr("gitwhy.adapters.skill._dir_if_skill", lambda _path: None)
+    monkeypatch.setattr("intentline.adapters.skill._dir_if_skill", lambda _path: None)
     with pytest.raises(CorruptError):
         bundled_skill_dir()
 
-    packaged = tmp_path / "gitwhy-skill"
+    packaged = tmp_path / "intentline-skill"
     packaged.mkdir()
     (packaged / "SKILL.md").write_text("skill\n", encoding="utf-8")
     calls = {"n": 0}
@@ -265,10 +266,10 @@ def test_bundle_lookup_and_agents_refresh(tmp_path: Path, monkeypatch: pytest.Mo
             return None
         return packaged
 
-    monkeypatch.setattr("gitwhy.adapters.skill._dir_if_skill", fake_dir)
+    monkeypatch.setattr("intentline.adapters.skill._dir_if_skill", fake_dir)
     assert bundled_skill_dir() == packaged
 
-    monkeypatch.setattr("gitwhy.adapters.skill._read_template", lambda _path: None)
+    monkeypatch.setattr("intentline.adapters.skill._read_template", lambda _path: None)
 
     class _Packaged:
         def joinpath(self, _name: str) -> "_Packaged":
@@ -278,14 +279,14 @@ def test_bundle_lookup_and_agents_refresh(tmp_path: Path, monkeypatch: pytest.Mo
             assert encoding == "utf-8"
             return "from wheel\n"
 
-    monkeypatch.setattr("gitwhy.adapters.skill.files", lambda _pkg: _Packaged())
+    monkeypatch.setattr("intentline.adapters.skill.files", lambda _pkg: _Packaged())
     assert agents_template_text() == "from wheel\n"
 
     class _Missing:
         def joinpath(self, _name: str) -> "_Missing":
             raise OSError("missing")
 
-    monkeypatch.setattr("gitwhy.adapters.skill.files", lambda _pkg: _Missing())
+    monkeypatch.setattr("intentline.adapters.skill.files", lambda _pkg: _Missing())
     with pytest.raises(CorruptError):
         agents_template_text()
 
@@ -310,7 +311,7 @@ def test_user_skill_dir_lives_under_the_home_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    assert home_skill_dir() == tmp_path / ".claude" / "skills" / "gitwhy"
+    assert home_skill_dir() == tmp_path / ".claude" / "skills" / "intentline"
 
 
 def test_uninstall_leaves_an_unmanaged_agents_file(
@@ -323,7 +324,7 @@ def test_uninstall_leaves_an_unmanaged_agents_file(
     assert "Nothing changed" in result.stdout
 
 
-def test_uninstall_deletes_a_hook_that_only_held_gitwhy(
+def test_uninstall_deletes_a_hook_that_only_held_intentline(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     installed = _cli(repo, monkeypatch, "install-agent", "--hooks")
@@ -331,7 +332,7 @@ def test_uninstall_deletes_a_hook_that_only_held_gitwhy(
     removed = _cli(repo, monkeypatch, "uninstall-agent")
     assert removed.exit_code == 0, removed.output
     assert not (repo / ".git" / "hooks" / "prepare-commit-msg").exists()
-    assert "held only gitwhy's block" in removed.stdout
+    assert "held only intentline's block" in removed.stdout
 
 
 def test_user_skill_uninstall_reports_the_home_copy(

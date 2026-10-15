@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from gitwhy.affirm import (
+from intentline.affirm import (
     EMPTY_FIELD_NAMES,
     AffirmOutcome,
     affirm_record,
@@ -15,9 +15,9 @@ from gitwhy.affirm import (
     require_human,
     resolve_affirmer,
 )
-from gitwhy.errors import AffirmRefusedError, ExitCode, NotFoundError, UsageError
-from gitwhy.models import Record, StoredRecord
-from gitwhy.store import RecordStore, dump_yaml
+from intentline.errors import AffirmRefusedError, ExitCode, NotFoundError, UsageError
+from intentline.models import Record, StoredRecord
+from intentline.store import RecordStore, dump_yaml
 from tests.conftest import MakeRecord, record_data, uuid7
 
 NOW = datetime(2026, 10, 16, 9, 0, 0, tzinfo=UTC)
@@ -110,7 +110,7 @@ def test_apply_affirmation_keeps_unknown_keys() -> None:
 
 
 def test_affirmer_prefers_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("gitwhy.affirm.config_value", lambda key, cwd: "Git Name")
+    monkeypatch.setattr("intentline.affirm.config_value", lambda key, cwd: "Git Name")
     assert resolve_affirmer("  Flag Name ", tmp_path) == "Flag Name"
 
 
@@ -118,7 +118,7 @@ def test_affirmer_prefers_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 def test_affirmer_falls_back_to_git_user_name(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, flag: str | None
 ) -> None:
-    monkeypatch.setattr("gitwhy.affirm.config_value", lambda key, cwd: "Git Name")
+    monkeypatch.setattr("intentline.affirm.config_value", lambda key, cwd: "Git Name")
     assert resolve_affirmer(flag, tmp_path) == "Git Name"
 
 
@@ -126,7 +126,7 @@ def test_affirmer_falls_back_to_git_user_name(
 def test_affirmer_missing_is_usage_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, git_name: str | None
 ) -> None:
-    monkeypatch.setattr("gitwhy.affirm.config_value", lambda key, cwd: git_name)
+    monkeypatch.setattr("intentline.affirm.config_value", lambda key, cwd: git_name)
     with pytest.raises(UsageError, match="--by") as excinfo:
         resolve_affirmer(None, tmp_path)
     assert excinfo.value.exit_code == ExitCode.USAGE

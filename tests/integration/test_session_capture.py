@@ -1,4 +1,4 @@
-"""``gitwhy capture --session`` against real git repositories (docs/03 section 4, docs/05)."""
+"""``intentline capture --session`` against real git repositories (docs/03 section 4, docs/05)."""
 
 import json
 import shutil
@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.cli import app
-from gitwhy.models import Record
-from gitwhy.store import RecordStore, initialize
+from intentline.cli import app
+from intentline.models import Record
+from intentline.store import RecordStore, initialize
 from tests.conftest import plain
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "sessions"
@@ -39,7 +39,7 @@ def _capture(cwd: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> Result:
 
 
 def _records(repo: Path) -> list[Record]:
-    result = RecordStore(repo / ".gitwhy").list()
+    result = RecordStore(repo / ".intentline").list()
     assert result.errors == []
     return [Record.model_validate(r.model_dump()) for r in result.records]
 
@@ -75,7 +75,7 @@ def test_session_text_is_not_copied_into_the_record(
     _stage(repo, "src/billing/close.py")
     result = _capture(repo, monkeypatch, "--session", str(_outside_copy(tmp_path, "messages.json")))
     assert result.exit_code == 0, result.output
-    saved = next((repo / ".gitwhy" / "records").glob("*.yml")).read_text(encoding="utf-8")
+    saved = next((repo / ".intentline" / "records").glob("*.yml")).read_text(encoding="utf-8")
     for phrase in ("Redis", "mutable", "charged early", "API shape", "discounts", "agent"):
         assert phrase not in saved
     assert "goal: Close invoices at end of day, not per request." in saved
@@ -154,7 +154,7 @@ def test_source_ref_is_name_only_outside_the_repo(
     assert result.exit_code == 0, result.output
     record = _records(repo)[0]
     assert record.source.ref == "claude.jsonl"
-    saved = next((repo / ".gitwhy" / "records").glob("*.yml")).read_text(encoding="utf-8")
+    saved = next((repo / ".intentline" / "records").glob("*.yml")).read_text(encoding="utf-8")
     assert str(tmp_path) not in saved
 
 
@@ -184,7 +184,7 @@ def test_session_with_affirm_exits_1_and_writes_nothing(
     assert result.exit_code == 1, result.output
     assert "always a draft" in plain(result.output)
     assert _records(repo) == []
-    assert not (repo / ".gitwhy" / "pending").exists()
+    assert not (repo / ".intentline" / "pending").exists()
 
 
 def test_session_with_affirm_from_agent_shell_hits_the_human_gate_first(
@@ -195,7 +195,7 @@ def test_session_with_affirm_from_agent_shell_hits_the_human_gate_first(
     result = _capture(repo, monkeypatch, "--session", str(session), "--affirm", "--pending")
     assert result.exit_code == 8, result.output
     assert _records(repo) == []
-    assert not (repo / ".gitwhy" / "pending").exists()
+    assert not (repo / ".intentline" / "pending").exists()
 
 
 def test_missing_session_file_exits_9(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -241,7 +241,7 @@ def test_session_json_output(repo: Path, tmp_path: Path, monkeypatch: pytest.Mon
 def test_session_on_a_terminal_asks_no_questions(
     repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("gitwhy.cli.stdin_is_tty", lambda: True)
+    monkeypatch.setattr("intentline.cli.stdin_is_tty", lambda: True)
     _stage(repo, "a.py")
     session = _outside_copy(tmp_path, "plain.txt")
     result = _capture(repo, monkeypatch, "--session", str(session))

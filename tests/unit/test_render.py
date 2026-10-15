@@ -3,8 +3,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from gitwhy.models import Record
-from gitwhy.render import (
+from intentline.models import Record
+from intentline.render import (
     BANNER_AFFIRMED,
     BANNER_DRAFT,
     LIST_WIDTH,

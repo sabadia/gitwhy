@@ -8,13 +8,13 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from gitwhy import __version__
-from gitwhy.cli import GitwhyGroup, app, emit_json, open_store, stdin_is_tty
-from gitwhy.errors import (
+from intentline import __version__
+from intentline.cli import IntentlineGroup, app, emit_json, open_store, stdin_is_tty
+from intentline.errors import (
     AffirmRefusedError,
     CorruptError,
     ExitCode,
-    GitwhyError,
+    IntentlineError,
     NoRepoError,
     NotFoundError,
     SchemaVersionError,
@@ -54,9 +54,9 @@ def test_usage_errors_exit_1_not_2(args: list[str]) -> None:
     assert result.exit_code == 1, result.output
 
 
-# --- GitwhyError mapping, exercised through a throwaway app on the same group class ------
+# --- IntentlineError mapping, exercised through a throwaway app on the same group class ------
 
-probe = typer.Typer(cls=GitwhyGroup)
+probe = typer.Typer(cls=IntentlineGroup)
 
 
 @probe.callback()
@@ -66,13 +66,13 @@ def _probe_root() -> None:
 
 @probe.command()
 def fail(kind: str) -> None:
-    """Raise the named gitwhy error."""
-    errors: dict[str, GitwhyError] = {
+    """Raise the named intentline error."""
+    errors: dict[str, IntentlineError] = {
         "no-repo": NoRepoError("Not a git repository: /tmp/x.", hint="Run inside a repo."),
-        "corrupt": CorruptError("Record 0193 failed validation (.gitwhy/records/0193.yml)."),
+        "corrupt": CorruptError("Record 0193 failed validation (.intentline/records/0193.yml)."),
         "schema": SchemaVersionError("Record uses schema version 9."),
         "affirm": AffirmRefusedError("Refusing to affirm from a non-interactive shell."),
-        "missing": NotFoundError("No record with id 0193.", hint="Run `gitwhy list`."),
+        "missing": NotFoundError("No record with id 0193.", hint="Run `intentline list`."),
     }
     raise errors[kind]
 
@@ -92,17 +92,17 @@ def needs(name: str) -> None:
         ("missing", ExitCode.NOT_FOUND),
     ],
 )
-def test_gitwhy_errors_keep_their_exit_code(kind: str, code: ExitCode) -> None:
+def test_intentline_errors_keep_their_exit_code(kind: str, code: ExitCode) -> None:
     result = runner.invoke(probe, ["fail", kind])
     assert result.exit_code == code
 
 
-def test_gitwhy_error_message_and_hint_go_to_stderr() -> None:
+def test_intentline_error_message_and_hint_go_to_stderr() -> None:
     result = runner.invoke(probe, ["fail", "missing"])
     assert result.stdout == ""
     stderr = plain(result.stderr)
     assert "No record with id 0193." in stderr
-    assert "Run `gitwhy list`." in stderr
+    assert "Run `intentline list`." in stderr
 
 
 def test_missing_argument_is_usage_error() -> None:
@@ -126,7 +126,7 @@ def test_open_store_uses_repo_root(git_repo: Path, monkeypatch: pytest.MonkeyPat
     monkeypatch.chdir(sub)
     root, store = open_store()
     assert root == git_repo
-    assert store.gitwhy_dir == git_repo / ".gitwhy"
+    assert store.intentline_dir == git_repo / ".intentline"
 
 
 def test_emit_json_writes_one_document(capsys: pytest.CaptureFixture[str]) -> None:

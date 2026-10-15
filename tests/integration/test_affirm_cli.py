@@ -1,4 +1,4 @@
-"""``gitwhy affirm`` end to end in a real git repository (docs/05 section 2)."""
+"""``intentline affirm`` end to end in a real git repository (docs/05 section 2)."""
 
 import json
 import subprocess
@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.cli import app
-from gitwhy.models import Record
-from gitwhy.store import RecordStore, dump_yaml, initialize
+from intentline.cli import app
+from intentline.models import Record
+from intentline.store import RecordStore, dump_yaml, initialize
 from tests.conftest import MakeRecord, plain, record_data, uuid7
 
 runner = CliRunner()
@@ -27,11 +27,11 @@ def repo(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def store(repo: Path) -> RecordStore:
-    return RecordStore(repo / ".gitwhy")
+    return RecordStore(repo / ".intentline")
 
 
 def _tty(monkeypatch: pytest.MonkeyPatch, value: bool = True) -> None:
-    monkeypatch.setattr("gitwhy.cli.stdin_is_tty", lambda: value)
+    monkeypatch.setattr("intentline.cli.stdin_is_tty", lambda: value)
 
 
 def _affirm(*args: str, input: str | None = None) -> Result:
@@ -92,7 +92,7 @@ def test_uninitialized_repo_exits_2(git_repo: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.chdir(git_repo)
     result = _affirm(ID, "--i-am-human", "--by", "Ada")
     assert result.exit_code == 2
-    assert "gitwhy init" in plain(result.output)
+    assert "intentline init" in plain(result.output)
 
 
 # --- who is affirming ------------------------------------------------------------------------
@@ -110,7 +110,7 @@ def test_no_name_anywhere_exits_1(
 ) -> None:
     path = store.save(make_record())
     before = path.read_bytes()
-    monkeypatch.setattr("gitwhy.affirm.config_value", lambda key, cwd: None)
+    monkeypatch.setattr("intentline.affirm.config_value", lambda key, cwd: None)
     result = _affirm(ID, "--i-am-human")
     assert result.exit_code == 1
     assert "--by" in plain(result.output)

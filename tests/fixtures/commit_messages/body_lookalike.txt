@@ -1,6 +1,6 @@
 Refactor parser
 
-Gitwhy-Id: 01932a7e-5b1c-7c3a-8f21-000000000003 appears mid-body
+Intentline-Id: 01932a7e-5b1c-7c3a-8f21-000000000003 appears mid-body
 but this paragraph is prose, not a trailer block.
 
 The final paragraph has no trailers.

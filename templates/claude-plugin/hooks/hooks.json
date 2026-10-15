@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'command -v gitwhy >/dev/null 2>&1 || exit 0; gitwhy adapters claude-stop'",
+            "command": "sh -c 'command -v intentline >/dev/null 2>&1 || exit 0; intentline adapters claude-stop'",
             "timeout": 10
           }
         ]

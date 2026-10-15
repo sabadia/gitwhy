@@ -10,8 +10,8 @@ from uuid import UUID
 
 import pytest
 
-from gitwhy.models import Record
-from gitwhy.store import GITWHY_DIRNAME, RECORDS_DIRNAME, RecordStore
+from intentline.models import Record
+from intentline.store import INTENTLINE_DIRNAME, RECORDS_DIRNAME, RecordStore
 
 MakeRecord = Callable[..., Record]
 
@@ -81,17 +81,17 @@ def make_record() -> MakeRecord:
 
 
 @pytest.fixture
-def gitwhy_dir(tmp_path: Path) -> Path:
-    """An initialized ``.gitwhy`` directory (records dir present) inside ``tmp_path``."""
-    path = tmp_path / GITWHY_DIRNAME
+def intentline_dir(tmp_path: Path) -> Path:
+    """An initialized ``.intentline`` directory (records dir present) inside ``tmp_path``."""
+    path = tmp_path / INTENTLINE_DIRNAME
     (path / RECORDS_DIRNAME).mkdir(parents=True)
     return path
 
 
 @pytest.fixture
-def store(gitwhy_dir: Path) -> RecordStore:
-    """A store over an initialized ``.gitwhy`` directory."""
-    return RecordStore(gitwhy_dir)
+def store(intentline_dir: Path) -> RecordStore:
+    """A store over an initialized ``.intentline`` directory."""
+    return RecordStore(intentline_dir)
 
 
 @pytest.fixture
@@ -109,5 +109,5 @@ def isolated_user_config(
 ) -> Path:
     """Point the user config at an empty temp dir so tests never read the real ~/.config."""
     home = tmp_path_factory.mktemp("config-home")
-    monkeypatch.setenv("GITWHY_CONFIG_HOME", str(home))
+    monkeypatch.setenv("INTENTLINE_CONFIG_HOME", str(home))
     return home

@@ -1,6 +1,6 @@
 name: Publish
 
-# Build always. Upload only when the repository variable GITWHY_PUBLISH is true.
+# Build always. Upload only when the repository variable INTENTLINE_PUBLISH is true.
 # The upload authenticates with the UV_PUBLISH_TOKEN repository secret.
 
 on:
@@ -37,7 +37,7 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build
-    if: github.event_name == 'push' && vars.GITWHY_PUBLISH == 'true'
+    if: github.event_name == 'push' && vars.INTENTLINE_PUBLISH == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

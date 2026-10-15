@@ -1,4 +1,4 @@
-"""``gitwhy init`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
+"""``intentline init`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
 
 import subprocess
 from pathlib import Path
@@ -7,21 +7,21 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from gitwhy.cli import app
-from gitwhy.config import load_config
-from gitwhy.errors import CorruptError, NoRepoError
-from gitwhy.gitio import config_value, repo_root
-from gitwhy.models import Config
-from gitwhy.store import RecordStore, default_config_text, initialize
+from intentline.cli import app
+from intentline.config import load_config
+from intentline.errors import CorruptError, NoRepoError
+from intentline.gitio import config_value, repo_root
+from intentline.models import Config
+from intentline.store import RecordStore, default_config_text, initialize
 from tests.conftest import MakeRecord, plain, uuid7
 
 runner = CliRunner()
 
 LAYOUT = [
-    ".gitwhy/config.yml",
-    ".gitwhy/schema-version",
-    ".gitwhy/records/.gitkeep",
-    ".gitwhy/.gitignore",
+    ".intentline/config.yml",
+    ".intentline/schema-version",
+    ".intentline/records/.gitkeep",
+    ".intentline/.gitignore",
 ]
 
 
@@ -36,13 +36,13 @@ def test_init_creates_layout(git_repo: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert code == 0, output
     for rel in LAYOUT:
         assert (git_repo / rel).is_file(), rel
-    gitwhy = git_repo / ".gitwhy"
-    assert (gitwhy / "schema-version").read_text() == "1\n"
-    assert (gitwhy / ".gitignore").read_text() == "pending\n"
-    config = Config.model_validate(yaml.safe_load((gitwhy / "config.yml").read_text()))
+    intentline = git_repo / ".intentline"
+    assert (intentline / "schema-version").read_text() == "1\n"
+    assert (intentline / ".gitignore").read_text() == "pending\n"
+    config = Config.model_validate(yaml.safe_load((intentline / "config.yml").read_text()))
     assert config == Config()
-    assert "created .gitwhy/config.yml" in output
-    assert "Commit .gitwhy/" in output
+    assert "created .intentline/config.yml" in output
+    assert "Commit .intentline/" in output
 
 
 def test_init_from_subdirectory_uses_repo_root(
@@ -52,13 +52,13 @@ def test_init_from_subdirectory_uses_repo_root(
     sub.mkdir(parents=True)
     code, _ = _init(sub, monkeypatch)
     assert code == 0
-    assert (git_repo / ".gitwhy" / "config.yml").is_file()
-    assert not (sub / ".gitwhy").exists()
+    assert (git_repo / ".intentline" / "config.yml").is_file()
+    assert not (sub / ".intentline").exists()
 
 
 def test_init_twice_is_a_no_op(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _init(git_repo, monkeypatch)
-    config = git_repo / ".gitwhy" / "config.yml"
+    config = git_repo / ".intentline" / "config.yml"
     config.write_text("check:\n  min_lines: 99\n", encoding="utf-8")
     before = {rel: (git_repo / rel).read_bytes() for rel in LAYOUT}
 
@@ -73,18 +73,18 @@ def test_init_force_resets_config_but_keeps_records(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch, make_record: MakeRecord
 ) -> None:
     _init(git_repo, monkeypatch)
-    config = git_repo / ".gitwhy" / "config.yml"
+    config = git_repo / ".intentline" / "config.yml"
     config.write_text("check:\n  min_lines: 99\n", encoding="utf-8")
-    record_path = RecordStore(git_repo / ".gitwhy").save(make_record())
+    record_path = RecordStore(git_repo / ".intentline").save(make_record())
     record_bytes = record_path.read_bytes()
 
     code, output = _init(git_repo, monkeypatch, "--force")
 
     assert code == 0
     assert config.read_text(encoding="utf-8") == default_config_text()
-    assert "updated .gitwhy/config.yml" in output
+    assert "updated .intentline/config.yml" in output
     assert record_path.read_bytes() == record_bytes
-    assert RecordStore(git_repo / ".gitwhy").load(uuid7(1)).goal == "Goal number 1"
+    assert RecordStore(git_repo / ".intentline").load(uuid7(1)).goal == "Goal number 1"
 
 
 def test_init_outside_a_repo_exits_2_and_writes_nothing(
@@ -102,81 +102,81 @@ def test_init_outside_a_repo_exits_2_and_writes_nothing(
 def test_init_refuses_newer_schema_even_with_force(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch, force: bool
 ) -> None:
-    gitwhy = git_repo / ".gitwhy"
-    gitwhy.mkdir()
-    (gitwhy / "schema-version").write_text("2\n", encoding="utf-8")
+    intentline = git_repo / ".intentline"
+    intentline.mkdir()
+    (intentline / "schema-version").write_text("2\n", encoding="utf-8")
     code, output = _init(git_repo, monkeypatch, *(["--force"] if force else []))
     assert code == 6
-    assert "Upgrade gitwhy" in plain(output)
-    assert (gitwhy / "schema-version").read_text() == "2\n"
-    assert not (gitwhy / "config.yml").exists()
+    assert "Upgrade intentline" in plain(output)
+    assert (intentline / "schema-version").read_text() == "2\n"
+    assert not (intentline / "config.yml").exists()
 
 
 def test_init_garbled_schema_version_needs_force(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    gitwhy = git_repo / ".gitwhy"
-    gitwhy.mkdir()
-    (gitwhy / "schema-version").write_text("banana\n", encoding="utf-8")
+    intentline = git_repo / ".intentline"
+    intentline.mkdir()
+    (intentline / "schema-version").write_text("banana\n", encoding="utf-8")
 
     code, output = _init(git_repo, monkeypatch)
     assert code == 4
-    assert "gitwhy init --force" in plain(output)
+    assert "intentline init --force" in plain(output)
 
     code, output = _init(git_repo, monkeypatch, "--force")
     assert code == 0
-    assert (gitwhy / "schema-version").read_text() == "1\n"
-    assert "updated .gitwhy/schema-version" in output
+    assert (intentline / "schema-version").read_text() == "1\n"
+    assert "updated .intentline/schema-version" in output
 
 
 def test_init_keeps_existing_gitignore_lines(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    gitwhy = git_repo / ".gitwhy"
-    gitwhy.mkdir()
-    (gitwhy / ".gitignore").write_text("index.json", encoding="utf-8")
+    intentline = git_repo / ".intentline"
+    intentline.mkdir()
+    (intentline / ".gitignore").write_text("index.json", encoding="utf-8")
     code, _ = _init(git_repo, monkeypatch)
     assert code == 0
-    assert (gitwhy / ".gitignore").read_text() == "index.json\npending\n"
+    assert (intentline / ".gitignore").read_text() == "index.json\npending\n"
 
 
 def test_init_does_not_duplicate_pending_line(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    gitwhy = git_repo / ".gitwhy"
-    gitwhy.mkdir()
-    (gitwhy / ".gitignore").write_text("# local state\n  pending  \n", encoding="utf-8")
+    intentline = git_repo / ".intentline"
+    intentline.mkdir()
+    (intentline / ".gitignore").write_text("# local state\n  pending  \n", encoding="utf-8")
     _init(git_repo, monkeypatch)
-    assert (gitwhy / ".gitignore").read_text() == "# local state\n  pending  \n"
+    assert (intentline / ".gitignore").read_text() == "# local state\n  pending  \n"
 
 
 def test_init_fills_in_a_partial_layout(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    gitwhy = git_repo / ".gitwhy"
-    gitwhy.mkdir()
-    (gitwhy / "config.yml").write_text("hooks:\n  check: true\n", encoding="utf-8")
+    intentline = git_repo / ".intentline"
+    intentline.mkdir()
+    (intentline / "config.yml").write_text("hooks:\n  check: true\n", encoding="utf-8")
     code, output = _init(git_repo, monkeypatch)
     assert code == 0
-    assert (gitwhy / "config.yml").read_text() == "hooks:\n  check: true\n"
-    assert (gitwhy / "records" / ".gitkeep").is_file()
-    assert "created .gitwhy/records" in output
+    assert (intentline / "config.yml").read_text() == "hooks:\n  check: true\n"
+    assert (intentline / "records" / ".gitkeep").is_file()
+    assert "created .intentline/records" in output
 
 
 def test_init_verbose_lists_unchanged(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _init(git_repo, monkeypatch)
     code, output = _init(git_repo, monkeypatch, "--verbose")
     assert code == 0
-    assert "unchanged .gitwhy/config.yml" in output
+    assert "unchanged .intentline/config.yml" in output
 
 
-def test_gitwhy_path_that_is_a_file_is_corrupt(git_repo: Path) -> None:
-    (git_repo / ".gitwhy").write_text("oops", encoding="utf-8")
+def test_intentline_path_that_is_a_file_is_corrupt(git_repo: Path) -> None:
+    (git_repo / ".intentline").write_text("oops", encoding="utf-8")
     with pytest.raises(CorruptError, match="not a directory"):
         initialize(git_repo)
 
 
 def test_initialized_repo_works_with_the_store(git_repo: Path, make_record: MakeRecord) -> None:
     initialize(git_repo)
-    store = RecordStore(git_repo / ".gitwhy")
+    store = RecordStore(git_repo / ".intentline")
     store.save(make_record())
     result = store.list()
     assert [r.id for r in result.records] == [uuid7(1)]
@@ -193,7 +193,7 @@ def test_repo_root_from_nested_directory(git_repo: Path) -> None:
 
 
 def test_repo_root_without_git_installed(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("gitwhy.gitio.shutil.which", lambda name: None)
+    monkeypatch.setattr("intentline.gitio.shutil.which", lambda name: None)
     with pytest.raises(NoRepoError, match="git is not installed"):
         repo_root(git_repo)
 
@@ -201,7 +201,7 @@ def test_repo_root_without_git_installed(git_repo: Path, monkeypatch: pytest.Mon
 def test_git_config_value(git_repo: Path) -> None:
     subprocess.run(["git", "-C", str(git_repo), "config", "user.name", "Ada Lovelace"], check=True)  # noqa: S603, S607
     assert config_value("user.name", git_repo) == "Ada Lovelace"
-    assert config_value("gitwhy.nonexistent", git_repo) is None
+    assert config_value("intentline.nonexistent", git_repo) is None
 
 
 # --- #57: the project config written by init must not mask the user config ----------------
@@ -233,7 +233,7 @@ def test_init_config_sets_only_schema_version(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _init(git_repo, monkeypatch)
-    text = (git_repo / ".gitwhy" / "config.yml").read_text(encoding="utf-8")
+    text = (git_repo / ".intentline" / "config.yml").read_text(encoding="utf-8")
     assert yaml.safe_load(text) == {"schema_version": 1}
     assert load_config(git_repo) == Config()
 
@@ -251,7 +251,7 @@ def test_init_force_writes_the_minimal_config(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _init(git_repo, monkeypatch)
-    config = git_repo / ".gitwhy" / "config.yml"
+    config = git_repo / ".intentline" / "config.yml"
     config.write_text("check:\n  min_lines: 99\n", encoding="utf-8")
     _init(git_repo, monkeypatch, "--force")
     assert config.read_text(encoding="utf-8") == default_config_text()

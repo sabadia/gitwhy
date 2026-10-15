@@ -1,6 +1,6 @@
-# Gitwhy — Claude Code operating manual
+# Intentline — Claude Code operating manual
 
-You are the coding agent for **Gitwhy**, a local-first, git-native intent ledger for software developers.
+You are the coding agent for **Intentline**, a local-first, git-native intent ledger for software developers.
 
 Your job is to turn the documents in `docs/` into a production-grade, developer-friendly product. You create and own the GitHub repository, the project board, and every issue. You maintain that board as the single source of truth for what is happening. You decide the next piece of work from the board and from the user's latest instruction, then you do it.
 
@@ -8,13 +8,13 @@ Read this file first on every session. Then read the docs in the order listed be
 
 ## 1. Mission and final goal
 
-Gitwhy solves a problem that almost every software developer now has: code is cheap to write and expensive to understand.
+Intentline solves a problem that almost every software developer now has: code is cheap to write and expensive to understand.
 
 AI agents and humans produce changes whose *reason* dies in a chat, a meeting, or a head. Reviewers reverse-engineer intent from a diff. Debuggers guess which assumption broke. The next agent invents a plausible "why" and re-litigates a decision that was already made. Stack Overflow's 2026 survey found incomplete context (63%), knowledge in people's heads (61%), and outdated information (57%) as the top barriers to work. A 2026 engineering survey found teams spending 16.9 hours a week debugging versus 9.8 writing, with 35% of AI-generated code reaching production before the team understood it. Code review volume has roughly doubled while review capacity has not.
 
-Gitwhy captures a small structured intent record at the moment a change is made, stores it next to the code, links it to the commit with a git trailer, and returns it later at the exact place a human or agent needs it: a file and line, a commit, or a review.
+Intentline captures a small structured intent record at the moment a change is made, stores it next to the code, links it to the commit with a git trailer, and returns it later at the exact place a human or agent needs it: a file and line, a commit, or a review.
 
-**Final goal of this repository:** a production-grade, installable Python CLI (`gitwhy`) plus git hooks that a solo developer or a team can adopt today, with no server, no account, and no API key required for the core path. It must be reliable, typed, tested, documented, and small enough that adding it costs less than the context it saves.
+**Final goal of this repository:** a production-grade, installable Python CLI (`intentline`) plus git hooks that a solo developer or a team can adopt today, with no server, no account, and no API key required for the core path. It must be reliable, typed, tested, documented, and small enough that adding it costs less than the context it saves.
 
 Out of scope for the first release: a hosted service, a GitHub App, a review bot, a dashboard, a database, multi-user auth, billing.
 
@@ -24,10 +24,10 @@ These were confirmed by the product owner. Do not reopen them without an explici
 
 | Decision | Value |
 |---|---|
-| Product name | Gitwhy |
-| Package name | `gitwhy` |
-| Import name | `gitwhy` |
-| CLI command | `gitwhy` |
+| Product name | Intentline |
+| Package name | `intentline` |
+| Import name | `intentline` |
+| CLI command | `intentline` |
 | License | Apache License 2.0 |
 | Language | Python 3.12+ |
 | Package manager | uv |
@@ -36,20 +36,20 @@ These were confirmed by the product owner. Do not reopen them without an explici
 | Build backend | hatchling (not uv_build — safer for a pure-Python PyPI library) |
 | Layout | `src/` layout |
 | GitHub owner | The authenticated personal account. Resolve with `gh api user --jq .login`. Do not invent a username. |
-| Repo name | `gitwhy` |
+| Repo name | `intentline` |
 | Visibility | public |
 | Default branch | `main` |
 | MVP shape | CLI + git hooks only. No server. |
 | Record format | YAML, validated by Pydantic, stored in the repo |
-| Link to commit | git trailer `Gitwhy-Id:` |
+| Link to commit | git trailer `Intentline-Id:` |
 | Core path | Must work offline and with no LLM API key |
 
 Assumptions you may treat as decided unless the user overrides them:
 
 - Repo description: "Git-native intent ledger. Capture why a change exists, and get it back at review and debug time."
 - Python minimum is 3.12. Type hints use `X | Y` and `list[str]`, not `Optional` / `List`.
-- Records live in `.gitwhy/records/<id>.yml`.
-- Config lives in `.gitwhy/config.yml` (project) and `~/.config/gitwhy/config.yml` (user).
+- Records live in `.intentline/records/<id>.yml`.
+- Config lives in `.intentline/config.yml` (project) and `~/.config/intentline/config.yml` (user).
 - IDs are UUIDv7 (time-sortable).
 - Status of a record is `draft` or `affirmed`. An agent may draft. Only a human may affirm. Unaffirmed records are labeled as claims, never as facts.
 - Conventional Commits for this repo.
@@ -76,10 +76,10 @@ Do this before writing code. It is how you stay smart across a long project.
 1. Confirm tools: `gh auth status`, `git --version`, `uv --version`, `python3 --version`. If `gh` is not authenticated, stop and tell the user exactly which command to run (`gh auth login`, and `gh auth refresh -s project` if project scope is missing). Do not work around a missing auth.
 2. Resolve identity: `gh api user --jq '{login:.login,name:.name,id:.id}'`. Store the login. All repo and project operations use this login.
 3. Locate the repo:
-   - If the current directory is not a git repo, or has no `pyproject.toml` for gitwhy, follow `docs/06-github-protocol.md` section "First session" and create the repo.
-   - If it is the gitwhy repo, continue.
+   - If the current directory is not a git repo, or has no `pyproject.toml` for intentline, follow `docs/06-github-protocol.md` section "First session" and create the repo.
+   - If it is the intentline repo, continue.
 4. Sync: `git fetch --all --prune`, `git status`, `git log --oneline -20`.
-5. Read the board. List open issues on the Gitwhy project, grouped by Status. Use the GitHub Projects v2 GraphQL API via `gh` (classic Projects API is deprecated; do not use it).
+5. Read the board. List open issues on the Intentline project, grouped by Status. Use the GitHub Projects v2 GraphQL API via `gh` (classic Projects API is deprecated; do not use it).
 6. Read the latest issue comments on anything In Progress or In Review.
 7. Write a 5-line session brief in your own head (or as a comment on the issue you pick): what phase we are in, what is done, what is blocked, what you will do next, why.
 8. Only then start work.
@@ -90,11 +90,11 @@ If the board and the code disagree (an issue marked Done whose code is missing, 
 
 Follow `docs/06-github-protocol.md` exactly. Summary:
 
-1. Create public repo `gitwhy` under the authenticated user.
+1. Create public repo `intentline` under the authenticated user.
 2. Clone it, or init and push if you are already in an empty workspace the user wants used.
 3. Copy this `CLAUDE.md` and the `docs/` tree into the repo root. They are the project's source of truth.
 4. Add `LICENSE` (Apache-2.0), `README.md` (from `docs/README.md`), `.gitignore`, `.python-version` (`3.12`), and a minimal `pyproject.toml` only after the board exists.
-5. Create a GitHub Project (v2) titled **Gitwhy**.
+5. Create a GitHub Project (v2) titled **Intentline**.
 6. Add fields: Status, Phase, Type, Priority, Area. Exact options are in the protocol doc.
 7. Create every issue listed in `docs/04-roadmap.md`. Each issue body must contain the acceptance criteria from that doc. Add every issue to the project. Set Status = Backlog, Phase, Type, Priority, Area.
 8. Create labels and milestones matching the phases.
@@ -108,7 +108,7 @@ Follow `docs/06-github-protocol.md` exactly. Summary:
 - The board is the backlog. A task that is not an issue does not exist.
 - Before starting an issue: move it to In Progress, assign it to the authenticated user, create branch `type/short-slug` (example: `feat/schema-v1`).
 - One issue per branch unless the user says to batch.
-- Conventional Commits. Trailer `Gitwhy-Id:` is for the *product's* records, not for commits of the gitwhy repo itself, until the product can record its own changes. Once the CLI works, dogfood it.
+- Conventional Commits. Trailer `Intentline-Id:` is for the *product's* records, not for commits of the intentline repo itself, until the product can record its own changes. Once the CLI works, dogfood it.
 - Open a PR when the acceptance criteria pass. Link the issue (`Closes #N`). Request no reviewer unless the user is one. Move the card to In Review.
 - After merge, move to Done. Delete the branch.
 - If you discover new work, create an issue, add it to the board, and do not silently expand scope.
@@ -131,7 +131,7 @@ Required:
 - pytest, pytest-cov
 - ruff (lint + format)
 - mypy in strict mode, or ty if it is the current Astral type checker and is stable enough; default to mypy strict unless ty is clearly production-ready when you start. Document the choice.
-- pre-commit or a `just`/`make` task plus a uv script for `uv run gitwhy` self-check
+- pre-commit or a `just`/`make` task plus a uv script for `uv run intentline` self-check
 - GitHub Actions for CI
 
 Forbidden in the core path:
@@ -139,23 +139,23 @@ Forbidden in the core path:
 - A web framework (FastAPI, Flask, Django) as a required dependency
 - A database (Postgres, SQLite, Redis)
 - An LLM SDK as a required dependency
-- Network calls on `gitwhy why`, `gitwhy capture`, `gitwhy check`, or inside the MCP server
+- Network calls on `intentline why`, `intentline capture`, `intentline check`, or inside the MCP server
 - Heavy agent frameworks (LangGraph, LangChain) inside this CLI
 
 Allowed as optional extras, not imported by core commands:
 
-- The official MCP Python SDK (or the current recommended MCP library — check docs and pin it) for the `gitwhy-mcp` entry point only.
+- The official MCP Python SDK (or the current recommended MCP library — check docs and pin it) for the `intentline-mcp` entry point only.
 
-Optional later (not MVP): a `gitwhy extract` command that shells out to a user-configured model. It must be off by default and must never be imported by the core commands.
+Optional later (not MVP): a `intentline extract` command that shells out to a user-configured model. It must be off by default and must never be imported by the core commands.
 
 Style:
 
-- `src/gitwhy/` package
+- `src/intentline/` package
 - `from __future__ import annotations` only if needed; prefer 3.12 syntax
 - `pathlib.Path` everywhere, never `os.path`
 - No `Optional`, `List`, `Dict` from `typing` — use `X | None`, `list`, `dict`
 - Public functions have docstrings. Modules have a one-line module docstring.
-- Errors are a typed hierarchy in `gitwhy.errors`, with stable exit codes (see schema doc).
+- Errors are a typed hierarchy in `intentline.errors`, with stable exit codes (see schema doc).
 
 ## 8. Product invariants (never break these)
 
@@ -164,9 +164,9 @@ Style:
 3. **Git is the bus.** The trailer is the link. The YAML is the body. Both travel with clone and fork.
 4. **Small records.** A record is about twenty lines. If a design starts producing essays, reject it.
 5. **Draft vs affirmed.** Agents draft. Humans affirm. Queries must show the status.
-6. **Line-addressable.** `gitwhy why path/to/file.py:88` must work. That is the product.
+6. **Line-addressable.** `intentline why path/to/file.py:88` must work. That is the product.
 7. **Offline and fast.** Query path is pure local file and git reads. Target under 100 ms on a repo with 10k commits for the common case.
-8. **Agent-usable.** A coding agent on a machine with `gitwhy` installed can capture a draft and recall a reason using the skill, the MCP server, or the CLI. It cannot affirm, and it cannot invent a why.
+8. **Agent-usable.** A coding agent on a machine with `intentline` installed can capture a draft and recall a reason using the skill, the MCP server, or the CLI. It cannot affirm, and it cannot invent a why.
 9. **One skill, one server.** Do not fork the skill text per agent. Do not put MCP inside the core import path.
 
 ## 9. Definition of done (every issue)

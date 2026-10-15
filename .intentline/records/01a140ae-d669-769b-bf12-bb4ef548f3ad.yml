@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01a140ae-d669-769b-bf12-bb4ef548f3ad
+status: draft
+created_at: '2026-10-15T17:49:22Z'
+updated_at: '2026-10-15T17:49:22Z'
+affirmed_at: null
+affirmed_by: null
+author:
+  kind: agent
+  name: null
+  tool: grok
+goal: Non-trivial changes in this repo should carry a Intentline record.
+constraints: []
+rejected: []
+assumptions: []
+falsifier: ''
+evidence: []
+links:
+- path: CONTRIBUTING.md
+  start_line: null
+  end_line: null
+adr: null
+risks: []
+source:
+  kind: flags
+  ref: null

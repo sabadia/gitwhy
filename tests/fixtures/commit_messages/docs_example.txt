@@ -2,4 +2,4 @@ Close invoices in the daily job
 
 Moves finalization out of the request path so batch discounts apply.
 
-Gitwhy-Id: 01932a7e-5b1c-7c3a-8f21-9c0e4d2a1b77
+Intentline-Id: 01932a7e-5b1c-7c3a-8f21-9c0e4d2a1b77
