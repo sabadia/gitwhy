@@ -21,14 +21,19 @@ from whyline.affirm import affirm_record, require_human, resolve_affirmer
 from whyline.capture import AffirmRequest, CaptureInput, linked_files, prompt_missing
 from whyline.capture import capture as run_capture
 from whyline.check import CAPTURE_COMMAND, Verdict, run_check
+from whyline.config import enable_hook_check
 from whyline.errors import CheckFailedError, ExitCode, HookConflictError, WhylineError
 from whyline.errors import UsageError as WhylineUsageError
 from whyline.gitio import repo_root
 from whyline.hooks import (
+    MANAGED_HOOKS,
+    PREPARE_COMMIT_MSG,
+    HookResult,
     InstallStatus,
     UninstallStatus,
     apply_pending_trailer,
     install_hook,
+    pre_commit_check,
     uninstall_hook,
 )
 from whyline.link import link_amend_head, link_pending
@@ -585,62 +590,92 @@ def link(
 
 
 @app.command("install-hooks")
-def install_hooks() -> None:
-    """Install the prepare-commit-msg hook that adds the Whyline-Id trailer.
+def install_hooks(
+    check_hook: Annotated[
+        bool,
+        typer.Option(
+            "--check",
+            help="Also install a pre-commit hook that runs `whyline check`, and turn it on "
+            "(hooks.check: true in .whyline/config.yml).",
+        ),
+    ] = False,
+) -> None:
+    """Install the git hooks: prepare-commit-msg, and with --check, pre-commit.
 
-    When .whyline/pending holds an id (see `whyline link` and `capture --pending`), the hook
-    adds `Whyline-Id: <id>` to the next commit message and clears pending. It never blocks a
-    commit: if whyline is missing or fails, the commit goes ahead without a trailer. Safe to
-    run again. Only the lines between the `# whyline-managed` markers belong to whyline.
+    prepare-commit-msg: when .whyline/pending holds an id (see `whyline link` and
+    `capture --pending`), adds `Whyline-Id: <id>` to the next commit message and clears
+    pending. It never blocks a commit.
 
-    A prepare-commit-msg hook that is not whyline's is never overwritten, and nothing is
-    written when core.hooksPath is set; in both cases the lines to add yourself are printed on
-    stdout and the command exits 5.
+    pre-commit (opt-in, --check): runs `whyline check` on the staged changes and blocks the
+    commit only when a large change has no record, printing the capture command. If whyline
+    is missing or fails, the commit goes ahead. `git commit --no-verify` skips it.
 
-    Exits 2 outside a git repository, and 5 when it refuses to write the hook.
+    Safe to run again. Only the lines between the `# whyline-managed` markers belong to
+    whyline. A hook that is not whyline's is never overwritten, and nothing is written when
+    core.hooksPath is set; in both cases the lines to add yourself are printed on stdout and
+    the command exits 5.
+
+    Exits 2 outside a git repository, 4 for a corrupt project config, and 5 when it refuses
+    to write a hook.
     """
     root = repo_root(Path.cwd())
-    result = install_hook(root)
-    shown = _display_path(result.path, root)
-    if result.status is InstallStatus.CREATED:
-        typer.echo(f"Installed {result.hook} hook: {shown}")
-    elif result.status is InstallStatus.UPDATED:
-        typer.echo(f"Updated whyline's block in {shown}")
-    elif result.status is InstallStatus.UNCHANGED:
-        typer.echo(f"{result.hook} hook already installed: {shown}. Nothing changed.")
-    else:
+    hooks = MANAGED_HOOKS if check_hook else (PREPARE_COMMIT_MSG,)
+    refused: list[HookResult] = []
+    for hook in hooks:
+        result = install_hook(root, hook)
+        shown = _display_path(result.path, root)
+        if result.status is InstallStatus.CREATED:
+            typer.echo(f"Installed {result.hook} hook: {shown}")
+        elif result.status is InstallStatus.UPDATED:
+            typer.echo(f"Updated whyline's block in {shown}")
+        elif result.status is InstallStatus.UNCHANGED:
+            typer.echo(f"{result.hook} hook already installed: {shown}. Nothing changed.")
+        else:
+            refused.append(result)
+    if check_hook:
+        if enable_hook_check(root):
+            typer.echo("Turned on the pre-commit check (hooks.check: true in .whyline/config.yml).")
+        else:
+            typer.echo("The pre-commit check was already on.")
+    if not refused:
+        return
+    for result in refused:
+        typer.echo(f"# Add to {_display_path(result.path, root)}:")
         typer.echo(result.snippet, nl=False)
-        if result.status is InstallStatus.HOOKS_PATH:
-            raise HookConflictError(
-                f"core.hooksPath is set, so whyline did not write into {shown}.",
-                hint=f"Add the lines printed above to {shown} (create it with `#!/bin/sh` "
-                "if needed, and make it executable).",
-            )
+    first = refused[0]
+    shown = ", ".join(_display_path(r.path, root) for r in refused)
+    if first.status is InstallStatus.HOOKS_PATH:
         raise HookConflictError(
-            f"{shown} already exists and is not managed by whyline; it was left unchanged.",
-            hint="Add the lines printed above to it yourself.",
+            f"core.hooksPath is set, so whyline did not write into {shown}.",
+            hint="Add the lines printed above to each file (create it with `#!/bin/sh` "
+            "if needed, and make it executable).",
         )
+    raise HookConflictError(
+        f"{shown} already exists and is not managed by whyline; left unchanged.",
+        hint="Add the lines printed above yourself.",
+    )
 
 
 @app.command("uninstall-hooks")
 def uninstall_hooks() -> None:
-    """Remove whyline's block from the prepare-commit-msg hook.
+    """Remove whyline's blocks from the prepare-commit-msg and pre-commit hooks.
 
     Only the lines between the `# whyline-managed` markers are removed; any other lines in
-    the hook stay. A hook file left with nothing but a shebang is deleted. Records and
-    .whyline/ are not touched.
+    a hook stay. A hook file left with nothing but a shebang is deleted. Records and
+    .whyline/ (including hooks.check in config) are not touched.
 
     Exits 2 outside a git repository.
     """
     root = repo_root(Path.cwd())
-    path, status = uninstall_hook(root)
-    shown = _display_path(path, root)
-    if status is UninstallStatus.REMOVED_FILE:
-        typer.echo(f"Removed {shown} (it held only whyline's block).")
-    elif status is UninstallStatus.REMOVED_BLOCK:
-        typer.echo(f"Removed whyline's block from {shown}; your other lines are unchanged.")
-    else:
-        typer.echo(f"No whyline hook found in {shown}. Nothing changed.")
+    for hook in MANAGED_HOOKS:
+        path, status = uninstall_hook(root, hook)
+        shown = _display_path(path, root)
+        if status is UninstallStatus.REMOVED_FILE:
+            typer.echo(f"Removed {shown} (it held only whyline's block).")
+        elif status is UninstallStatus.REMOVED_BLOCK:
+            typer.echo(f"Removed whyline's block from {shown}; your other lines are unchanged.")
+        else:
+            typer.echo(f"No whyline hook found in {shown}. Nothing changed.")
 
 
 def _display_path(path: Path, root: Path) -> str:
@@ -817,3 +852,24 @@ def check(
             f"({scope}) reach the {result.min_lines}-line threshold, and no record is linked.",
             hint=f"Run: {CAPTURE_COMMAND}",
         )
+
+
+@hook_app.command("pre-commit")
+def hook_pre_commit() -> None:
+    """Called by git. Exits 3 only when the staged change needs a record; otherwise 0."""
+    try:
+        root = repo_root(Path.cwd())
+        result = pre_commit_check(root)
+    except Exception as exc:  # a broken check must not block commits: top-level safety boundary
+        typer.echo(f"whyline: skipped the check ({exc})", err=True)
+        return
+    if result is None or result.ok:
+        return
+    typer.echo(
+        f"whyline: {result.changed_lines} changed lines reach the {result.min_lines}-line "
+        "threshold and no record is linked, so this commit is blocked.\n"
+        f"Run: {CAPTURE_COMMAND}\n"
+        "Then commit again. To skip the check once: git commit --no-verify",
+        err=True,
+    )
+    raise typer.Exit(int(ExitCode.CHECK_FAILED))

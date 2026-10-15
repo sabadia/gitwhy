@@ -10,6 +10,8 @@ from enum import StrEnum
 from importlib.resources import files
 from pathlib import Path
 
+from whyline.check import CheckResult, run_check
+from whyline.config import load_config
 from whyline.gitio import add_whyline_trailer, config_value, git_path, whyline_ids
 from whyline.store import PENDING_FILENAME, WHYLINE_DIRNAME, read_pending
 
@@ -18,6 +20,8 @@ BEGIN_MARKER = f"{MARKER}: begin"
 END_MARKER = f"{MARKER}: end"
 SHEBANG = "#!/bin/sh"
 PREPARE_COMMIT_MSG = "prepare-commit-msg"
+PRE_COMMIT = "pre-commit"
+MANAGED_HOOKS = (PREPARE_COMMIT_MSG, PRE_COMMIT)
 
 
 def managed_block(hook: str = PREPARE_COMMIT_MSG) -> str:
@@ -143,3 +147,15 @@ def apply_pending_trailer(root: Path, message_file: Path) -> str | None:
     message_file.write_text(updated, encoding="utf-8")
     (whyline_dir / PENDING_FILENAME).unlink(missing_ok=True)
     return str(record_id)
+
+
+def pre_commit_check(root: Path) -> CheckResult | None:
+    """Run ``whyline check`` on the staged diff if the project turned the check on.
+
+    Returns None when ``hooks.check`` and ``check.enabled`` are both false, so an installed hook
+    stays quiet until a team opts in.
+    """
+    config = load_config(root)
+    if not (config.hooks.check or config.check.enabled):
+        return None
+    return run_check(root)
