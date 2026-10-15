@@ -26,6 +26,34 @@ Code is cheap to write. Understanding it is not. The reason for a change dies in
 | [docs/05-quality.md](docs/05-quality.md) | Tests, CI, security, release bar |
 | [docs/06-github-protocol.md](docs/06-github-protocol.md) | Repo, board, catch-up, next-action rules |
 | [docs/07-agent-integrations.md](docs/07-agent-integrations.md) | Skill, MCP, hooks, AGENTS.md — how any coding agent uses Whyline |
+| [docs/adapters/claude-code.md](docs/adapters/claude-code.md) | Claude Code skill, MCP, and Stop hook |
+| [docs/adapters/other-agents.md](docs/adapters/other-agents.md) | Codex, Cursor, Copilot, and the shell fallback |
+
+## Use from a coding agent
+
+An agent recalls a reason, captures a draft, and checks that a large change has a record. It does not affirm. It does not invent `rejected`, `assumptions`, or `falsifier`.
+
+```sh
+whyline why path/to/file.py:88
+whyline capture --goal "the user's goal" --file path/to/file.py --pending
+whyline check
+```
+
+`whyline install-agent` copies one skill into the project and appends the managed block to `AGENTS.md`. If whyline is not on PATH, `skills/whyline/scripts/why.sh` exits 0 and prints `No record: whyline is not on PATH.` `skills/whyline/scripts/capture.sh` exits 127.
+
+MCP is optional, local, and stdio-only. Install it with `uv tool install 'whyline[mcp]'`. The server does not affirm.
+
+```json
+{
+  "mcpServers": {
+    "whyline": {
+      "command": "whyline-mcp"
+    }
+  }
+}
+```
+
+Where that JSON goes: [Claude Code](docs/adapters/claude-code.md) and [Codex, Cursor, Copilot, and other agents](docs/adapters/other-agents.md).
 
 ## License
 

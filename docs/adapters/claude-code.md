@@ -2,6 +2,14 @@
 
 The Stop hook drafts one record when a session ends. It never affirms. The skill is the same file `whyline install-agent` copies. This plugin does not carry a second copy.
 
+## Install
+
+1. `whyline install-agent` copies the skill to `.claude/skills/whyline` and appends the managed block to `AGENTS.md`.
+2. `uv tool install 'whyline[mcp]'`, then `claude mcp add --scope project whyline -- whyline-mcp`. The server has no affirm tool.
+3. `whyline adapters claude --write` merges the Stop hook into this repository's `.claude/settings.json`.
+
+Other agents: [other-agents.md](other-agents.md).
+
 ## Stop hook
 
 `whyline adapters claude` prints a snippet. `whyline adapters claude --write` merges it into `.claude/settings.json` at the repository root. A missing file is created. A second run does not add a second hook and does not rewrite the file. Other keys in that file stay as they are.
