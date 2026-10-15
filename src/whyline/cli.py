@@ -17,7 +17,7 @@ from typer.core import TyperGroup
 
 from whyline import __version__
 from whyline.affirm import affirm_record, require_human, resolve_affirmer
-from whyline.capture import CaptureInput
+from whyline.capture import AffirmRequest, CaptureInput
 from whyline.capture import capture as run_capture
 from whyline.errors import ExitCode, WhylineError
 from whyline.errors import UsageError as WhylineUsageError
@@ -379,18 +379,42 @@ def capture_command(
         bool,
         typer.Option("--pending", help="Write the id to .whyline/pending for the next commit."),
     ] = False,
+    affirm: Annotated[
+        bool,
+        typer.Option(
+            "--affirm",
+            help="Affirm the record now (humans only). The same human gate as `whyline affirm`.",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="With --affirm: do not ask about empty fields."),
+    ] = False,
+    i_am_human: Annotated[
+        bool,
+        typer.Option(
+            "--i-am-human",
+            help="With --affirm: allow a non-interactive shell. Only a human may pass this.",
+        ),
+    ] = False,
     json_output: JsonOption = False,
 ) -> None:
     """Record why a change exists, as a draft.
 
     Every field is stored exactly as given; anything you leave out stays empty. Links default to
-    the staged files. Captured records are always drafts: a draft is a claim, not a confirmed
-    reason.
+    the staged files. Captured records are drafts: a draft is a claim, not a confirmed reason.
+    A human may pass --affirm to confirm it in the same step; that is refused (exit 8) from a
+    non-interactive shell unless --i-am-human is passed. The affirmer is --author-name, else
+    git user.name.
 
     Exits 1 for bad input (no --goal, nothing staged and no --file, a path outside the
-    repository), 2 outside a git repository or before `whyline init`, 4 for a corrupt config,
-    and 6 if the repository uses a newer schema than this whyline.
+    repository, a declined confirmation), 2 outside a git repository or before `whyline init`,
+    4 for a corrupt config, 6 if the repository uses a newer schema than this whyline, and 8
+    when --affirm is refused by the human gate.
     """
+    interactive = stdin_is_tty()
+    if affirm:
+        require_human(interactive=interactive, i_am_human=i_am_human)
     if goal is None:
         raise WhylineUsageError(
             "No goal given.",
@@ -411,7 +435,22 @@ def capture_command(
         author_name=author_name,
         agent_tool=agent_tool,
     )
-    result = run_capture(inp, root=root, cwd=Path.cwd(), pending=pending)
+    request = (
+        AffirmRequest(
+            by=resolve_affirmer(author_name, root),
+            interactive=interactive,
+            i_am_human=i_am_human,
+            yes=yes,
+            confirm=_confirm_empty_fields,
+        )
+        if affirm
+        else None
+    )
+    result = run_capture(inp, root=root, cwd=Path.cwd(), pending=pending, affirm=request)
+    if result.empty_fields and not interactive:
+        typer.echo(
+            f"Warning: affirmed with empty fields: {', '.join(result.empty_fields)}.", err=True
+        )
     shown = result.path.relative_to(root).as_posix()
     if json_output:
         emit_json(
@@ -423,7 +462,10 @@ def capture_command(
             }
         )
         return
-    typer.echo(f"Captured draft {result.record.id}")
+    if result.record.status == "affirmed":
+        typer.echo(f"Captured and affirmed {result.record.id} by {result.record.affirmed_by}")
+    else:
+        typer.echo(f"Captured draft {result.record.id}")
     typer.echo(f"  {shown}")
     if result.pending:
         typer.echo("  marked pending in .whyline/pending")

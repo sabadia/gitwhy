@@ -7,13 +7,15 @@ import pytest
 
 from tests.conftest import uuid7
 from whyline.capture import (
+    AffirmRequest,
     CaptureInput,
     build_record,
+    capture,
     new_record_id,
     pair_rejected,
     resolve_files,
 )
-from whyline.errors import ExitCode, UsageError
+from whyline.errors import AffirmRefusedError, ExitCode, UsageError
 
 NOW = datetime(2026, 10, 15, 13, 4, 11, tzinfo=UTC)
 ROOT = Path("/repo")
@@ -178,3 +180,23 @@ def test_new_record_ids_are_unique_plain_uuid7() -> None:
     assert first != second
     assert first.version == 7 and second.version == 7
     assert type(first).__module__ == "uuid"
+
+
+# --- affirm at capture time -------------------------------------------------------------------
+
+
+def _request(*, interactive: bool, i_am_human: bool = False, yes: bool = False) -> AffirmRequest:
+    return AffirmRequest(
+        by="Ada", interactive=interactive, i_am_human=i_am_human, yes=yes, confirm=lambda f: True
+    )
+
+
+def test_capture_affirm_gate_runs_before_the_store_is_touched(tmp_path: Path) -> None:
+    with pytest.raises(AffirmRefusedError):
+        capture(
+            CaptureInput(goal="g", files=("a.py",)),
+            root=tmp_path,
+            cwd=tmp_path,
+            affirm=_request(interactive=False),
+        )
+    assert not (tmp_path / ".whyline").exists()

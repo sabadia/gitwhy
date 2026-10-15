@@ -283,3 +283,134 @@ def test_staged_paths_with_non_utf8_names(git_repo: Path, monkeypatch: pytest.Mo
 def test_help_lists_exit_codes() -> None:
     text = plain(runner.invoke(app, ["capture", "--help"]).stdout)
     assert "Exits 1" in text and "2 outside a git repository" in text
+
+
+# --- capture --affirm (the human gate is shared with `whyline affirm`) ------------------------
+
+FULL = (
+    "--constraint", "c", "--rejected", "r", "--assumption", "a",
+    "--falsifier", "f", "--risk", "k", "--evidence-test", "tests/t.py::t",
+)  # fmt: skip
+
+
+def _tty(monkeypatch: pytest.MonkeyPatch, value: bool) -> None:
+    monkeypatch.setattr("whyline.cli.stdin_is_tty", lambda: value)
+
+
+def test_capture_affirm_from_non_tty_exits_8_and_writes_nothing(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stage(repo, "a.py")
+    result = _capture(repo, monkeypatch, "--goal", "g", "--affirm", "--pending")
+    assert result.exit_code == 8, result.output
+    assert "--i-am-human" in plain(result.output)
+    assert _records(repo) == []
+    assert not (repo / ".whyline" / "pending").exists()
+
+
+def test_capture_affirm_gate_runs_before_anything_else(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plain_dir = tmp_path / "not-a-repo"
+    plain_dir.mkdir()
+    result = _capture(plain_dir, monkeypatch, "--affirm")
+    assert result.exit_code == 8
+
+
+def test_capture_affirm_with_i_am_human_on_non_tty(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stage(repo, "a.py")
+    result = _capture(
+        repo, monkeypatch, "--goal", "g", "--author-name", "Ada", "--affirm", "--i-am-human"
+    )
+    assert result.exit_code == 0, result.output
+    (record,) = _records(repo)
+    assert record.status == "affirmed"
+    assert record.affirmed_by == "Ada"
+    assert record.affirmed_at == record.created_at
+    assert "Captured and affirmed" in plain(result.output)
+    assert "Warning: affirmed with empty fields" in plain(result.output)
+    assert record.rejected == [] and record.falsifier == ""
+
+
+def test_capture_affirm_defaults_affirmer_to_git_user_name(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git(repo, "config", "user.name", "Grace Hopper")
+    _stage(repo, "a.py")
+    result = _capture(repo, monkeypatch, "--goal", "g", "--affirm", "--i-am-human", *FULL)
+    assert result.exit_code == 0, result.output
+    (record,) = _records(repo)
+    assert record.affirmed_by == "Grace Hopper"
+    assert "Warning" not in plain(result.output)
+
+
+def test_capture_affirm_without_any_name_exits_1_and_writes_nothing(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git(repo, "config", "user.name", "")
+    _stage(repo, "a.py")
+    result = _capture(repo, monkeypatch, "--goal", "g", "--affirm", "--i-am-human")
+    assert result.exit_code == 1, result.output
+    assert _records(repo) == []
+
+
+def test_capture_affirm_on_tty_confirms_empty_fields(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _tty(monkeypatch, True)
+    _stage(repo, "a.py")
+    monkeypatch.chdir(repo)
+    result = runner.invoke(
+        app, ["capture", "--goal", "g", "--author-name", "Ada", "--affirm"], input="y\n"
+    )
+    assert result.exit_code == 0, result.output
+    assert "These fields are empty" in plain(result.output)
+    (record,) = _records(repo)
+    assert record.status == "affirmed"
+
+
+def test_capture_affirm_declined_on_tty_writes_nothing(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _tty(monkeypatch, True)
+    _stage(repo, "a.py")
+    monkeypatch.chdir(repo)
+    result = runner.invoke(
+        app,
+        ["capture", "--goal", "g", "--author-name", "Ada", "--affirm", "--pending"],
+        input="n\n",
+    )
+    assert result.exit_code == 1, result.output
+    assert "Not captured" in plain(result.output)
+    assert _records(repo) == []
+    assert not (repo / ".whyline" / "pending").exists()
+
+
+def test_capture_affirm_yes_skips_the_question(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _tty(monkeypatch, True)
+    _stage(repo, "a.py")
+    result = _capture(repo, monkeypatch, "--goal", "g", "--author-name", "Ada", "--affirm", "--yes")
+    assert result.exit_code == 0, result.output
+    assert "These fields are empty" not in plain(result.output)
+    assert _records(repo)[0].status == "affirmed"
+
+
+def test_capture_affirm_json(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _stage(repo, "a.py")
+    result = _capture(
+        repo, monkeypatch, "--goal", "g", "--author-name", "Ada", "--affirm", "--i-am-human",
+        "--json", *FULL,
+    )  # fmt: skip
+    assert result.exit_code == 0, result.output
+    assert _json(result)["record"]["status"] == "affirmed"
+
+
+def test_yes_and_i_am_human_without_affirm_still_draft(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stage(repo, "a.py")
+    result = _capture(repo, monkeypatch, "--goal", "g", "--yes", "--i-am-human")
+    assert result.exit_code == 0, result.output
+    assert _records(repo)[0].status == "draft"

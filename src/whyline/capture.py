@@ -4,7 +4,7 @@ Capture never invents a reason (CLAUDE.md invariant 1). Every narrative field is
 the input exactly; anything not supplied stays empty. Captured records are always drafts.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +14,7 @@ from uuid import UUID
 import uuid6
 from pydantic import ValidationError
 
+from whyline.affirm import apply_affirmation, empty_narrative_fields, require_human
 from whyline.config import load_config
 from whyline.errors import UsageError
 from whyline.gitio import staged_paths
@@ -46,12 +47,30 @@ class CaptureInput:
 
 
 @dataclass(frozen=True)
+class AffirmRequest:
+    """Affirm the record in the same step it is captured (``capture --affirm``).
+
+    The human gate and the empty-field confirmation are the same as ``whyline affirm``.
+    """
+
+    by: str
+    interactive: bool
+    i_am_human: bool
+    yes: bool
+    confirm: Callable[[list[str]], bool]
+
+
+@dataclass(frozen=True)
 class CaptureResult:
-    """The saved draft, where it was written, and whether it was marked pending."""
+    """The saved record, where it was written, and whether it was marked pending.
+
+    ``empty_fields`` lists empty narrative fields of a record affirmed at capture time.
+    """
 
     record: Record
     path: Path
     pending: bool
+    empty_fields: tuple[str, ...] = ()
 
 
 def new_record_id() -> UUID:
@@ -155,12 +174,18 @@ def capture(
     pending: bool = False,
     now: datetime | None = None,
     record_id: UUID | None = None,
+    affirm: AffirmRequest | None = None,
 ) -> CaptureResult:
     """Build a draft from ``inp``, save it under ``root/.whyline``, and optionally mark it pending.
 
     Links are ``inp.files`` if given, else the staged files. The author name falls back to
     ``capture.default_author_name`` from config when not supplied.
+
+    With ``affirm``, the human gate runs before anything else, and the record is affirmed
+    before its single save. A refused gate or a declined confirmation writes nothing.
     """
+    if affirm is not None:
+        require_human(interactive=affirm.interactive, i_am_human=affirm.i_am_human)
     store = RecordStore(root / WHYLINE_DIRNAME)
     store.require_initialized()
     files = resolve_files(inp.files, cwd=cwd, root=root) if inp.files else staged_paths(root)
@@ -177,10 +202,16 @@ def capture(
         now=now if now is not None else utc_now(),
         files=files,
     )
+    empty: list[str] = []
+    if affirm is not None:
+        empty = empty_narrative_fields(record)
+        if empty and affirm.interactive and not affirm.yes and not affirm.confirm(empty):
+            raise UsageError("Not captured: you declined to affirm with empty fields.")
+        record = apply_affirmation(record, by=affirm.by, now=record.created_at)
     path = store.save(record)
     if pending:
         write_pending(store.whyline_dir, record.id)
-    return CaptureResult(record=record, path=path, pending=pending)
+    return CaptureResult(record=record, path=path, pending=pending, empty_fields=tuple(empty))
 
 
 def _lexical(path: Path) -> Path:
