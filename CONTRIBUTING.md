@@ -19,8 +19,11 @@ uv sync --all-groups
 uv run ruff check
 uv run ruff format --check
 uv run mypy
-uv run pytest
+uv run pytest --cov
 ```
+
+CI fails if line coverage of `src/whyline` drops below 90% (`fail_under` in `pyproject.toml`).
+Do not lower it.
 
 Tooling: uv, hatchling (build backend), ruff (lint and format, line length 100), mypy in strict mode
 with the Pydantic plugin, pytest. ty was evaluated and is still pre-1.0 beta, so mypy is the type

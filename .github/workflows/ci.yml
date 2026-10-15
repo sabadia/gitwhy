@@ -42,5 +42,5 @@ jobs:
       - name: Type check
         run: uv run mypy
 
-      - name: Test
-        run: uv run pytest --cov=whyline --cov-report=term-missing
+      - name: Test (fails below the coverage floor in pyproject.toml)
+        run: uv run pytest --cov --cov-report=term-missing
