@@ -15,6 +15,18 @@ from whyline.store import RECORDS_DIRNAME, WHYLINE_DIRNAME, RecordStore
 
 MakeRecord = Callable[..., Record]
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_BOX = re.compile(r"[\u2500-\u257f]")
+
+
+def plain(output: str) -> str:
+    """Strip ANSI colour codes and Rich box drawing, and collapse whitespace.
+
+    Rich renders errors differently by terminal (CI forces colour), so tests compare text only.
+    """
+    return " ".join(_BOX.sub(" ", _ANSI.sub("", output)).split())
+
+
 SPEC_PATH = Path(__file__).resolve().parents[1] / "docs" / "03-schema-cli-hooks.md"
 
 

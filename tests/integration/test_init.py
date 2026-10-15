@@ -6,7 +6,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from tests.conftest import MakeRecord, uuid7
+from tests.conftest import MakeRecord, plain, uuid7
 from whyline.cli import app
 from whyline.errors import CorruptError, NoRepoError
 from whyline.gitio import repo_root
@@ -26,7 +26,7 @@ LAYOUT = [
 def _init(repo: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> tuple[int, str]:
     monkeypatch.chdir(repo)
     result = runner.invoke(app, ["init", *args])
-    return result.exit_code, result.output
+    return result.exit_code, plain(result.output)
 
 
 def test_init_creates_layout(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -39,7 +39,7 @@ def test_init_creates_layout(git_repo: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert (whyline / ".gitignore").read_text() == "pending\n"
     config = Config.model_validate(yaml.safe_load((whyline / "config.yml").read_text()))
     assert config == Config()
-    assert "created   .whyline/config.yml" in output
+    assert "created .whyline/config.yml" in output
     assert "Commit .whyline/" in output
 
 
@@ -80,7 +80,7 @@ def test_init_force_resets_config_but_keeps_records(
 
     assert code == 0
     assert config.read_text(encoding="utf-8") == default_config_text()
-    assert "updated   .whyline/config.yml" in output
+    assert "updated .whyline/config.yml" in output
     assert record_path.read_bytes() == record_bytes
     assert RecordStore(git_repo / ".whyline").load(uuid7(1)).goal == "Goal number 1"
 
@@ -105,7 +105,7 @@ def test_init_refuses_newer_schema_even_with_force(
     (whyline / "schema-version").write_text("2\n", encoding="utf-8")
     code, output = _init(git_repo, monkeypatch, *(["--force"] if force else []))
     assert code == 6
-    assert "Upgrade whyline" in " ".join(output.split())
+    assert "Upgrade whyline" in plain(output)
     assert (whyline / "schema-version").read_text() == "2\n"
     assert not (whyline / "config.yml").exists()
 
@@ -119,12 +119,12 @@ def test_init_garbled_schema_version_needs_force(
 
     code, output = _init(git_repo, monkeypatch)
     assert code == 4
-    assert "whyline init --force" in " ".join(output.split())
+    assert "whyline init --force" in plain(output)
 
     code, output = _init(git_repo, monkeypatch, "--force")
     assert code == 0
     assert (whyline / "schema-version").read_text() == "1\n"
-    assert "updated   .whyline/schema-version" in output
+    assert "updated .whyline/schema-version" in output
 
 
 def test_init_keeps_existing_gitignore_lines(
@@ -156,7 +156,7 @@ def test_init_fills_in_a_partial_layout(git_repo: Path, monkeypatch: pytest.Monk
     assert code == 0
     assert (whyline / "config.yml").read_text() == "hooks:\n  check: true\n"
     assert (whyline / "records" / ".gitkeep").is_file()
-    assert "created   .whyline/records" in output
+    assert "created .whyline/records" in output
 
 
 def test_init_verbose_lists_unchanged(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
