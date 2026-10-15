@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -250,3 +251,70 @@ def amend_head_message(message: str, cwd: Path) -> str:
             f"{completed.stderr.strip() or completed.stdout.strip() or 'unknown error'}."
         )
     return _run_git(["rev-parse", "HEAD"], cwd).stdout.strip()
+
+
+# --- history queries for recall (docs/02 section 4.4) -----------------------------------------
+
+_FIELD = "\x1f"
+_VALUE = "\x1d"
+_RECORD_END = "\x1e"
+_TRAILER_FORMAT = (
+    f"%H{_FIELD}%(trailers:key={TRAILER_KEY},valueonly=true,separator=%x1d){_RECORD_END}"
+)
+
+
+@dataclass(frozen=True)
+class CommitLinks:
+    """A commit and the record ids its ``Whyline-Id`` trailers name."""
+
+    sha: str
+    record_ids: tuple[UUID, ...]
+
+
+def _parse_commit_links(output: str) -> list[CommitLinks]:
+    commits: list[CommitLinks] = []
+    for chunk in output.split(_RECORD_END):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        sha, _, values = chunk.partition(_FIELD)
+        ids: list[UUID] = []
+        for value in values.split(_VALUE):
+            try:
+                record_id = UUID(value.strip())
+            except ValueError:
+                continue
+            if record_id not in ids:
+                ids.append(record_id)
+        commits.append(CommitLinks(sha=sha, record_ids=tuple(ids)))
+    return commits
+
+
+def line_history(root: Path, path: str, line: int) -> list[CommitLinks]:
+    """Return the commits that changed ``path`` at ``line``, newest first, with their links.
+
+    Uses ``git log -L``, which follows the line through edits. Returns an empty list when the
+    file is not in HEAD, the line is past its end, or there are no commits yet.
+    """
+    completed = _run_git(
+        ["log", "-L", f"{line},{line}:{path}", "--no-patch", f"--format={_TRAILER_FORMAT}"],
+        root,
+    )
+    if completed.returncode != 0:
+        return []
+    return _parse_commit_links(completed.stdout)
+
+
+def commit_links(root: Path, rev: str) -> CommitLinks | None:
+    """Return one commit (``rev`` resolved to a full sha) and its links, or None if unknown."""
+    completed = _run_git(
+        ["log", "-1", "--no-patch", f"--format={_TRAILER_FORMAT}", f"{rev}^{{commit}}", "--"],
+        root,
+    )
+    commits = _parse_commit_links(completed.stdout) if completed.returncode == 0 else []
+    return commits[0] if commits else None
+
+
+def is_shallow(root: Path) -> bool:
+    """Return True for a shallow clone, where history (and so recall) may be incomplete."""
+    return _run_git(["rev-parse", "--is-shallow-repository"], root).stdout.strip() == "true"
