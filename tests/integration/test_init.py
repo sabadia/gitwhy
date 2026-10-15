@@ -1,5 +1,6 @@
 """``whyline init`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,7 @@ from typer.testing import CliRunner
 from tests.conftest import MakeRecord, plain, uuid7
 from whyline.cli import app
 from whyline.errors import CorruptError, NoRepoError
-from whyline.gitio import repo_root
+from whyline.gitio import config_value, repo_root
 from whyline.models import Config
 from whyline.store import RecordStore, default_config_text, initialize
 
@@ -194,3 +195,9 @@ def test_repo_root_without_git_installed(git_repo: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr("whyline.gitio.shutil.which", lambda name: None)
     with pytest.raises(NoRepoError, match="git is not installed"):
         repo_root(git_repo)
+
+
+def test_git_config_value(git_repo: Path) -> None:
+    subprocess.run(["git", "-C", str(git_repo), "config", "user.name", "Ada Lovelace"], check=True)  # noqa: S603, S607
+    assert config_value("user.name", git_repo) == "Ada Lovelace"
+    assert config_value("whyline.nonexistent", git_repo) is None

@@ -101,3 +101,13 @@ def git_repo(tmp_path: Path) -> Path:
     repo.mkdir()
     subprocess.run(["git", "init", "-q", str(repo)], check=True)  # noqa: S603, S607
     return repo.resolve()
+
+
+@pytest.fixture(autouse=True)
+def isolated_user_config(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Point the user config at an empty temp dir so tests never read the real ~/.config."""
+    home = tmp_path_factory.mktemp("config-home")
+    monkeypatch.setenv("WHYLINE_CONFIG_HOME", str(home))
+    return home
