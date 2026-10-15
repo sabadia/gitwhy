@@ -228,9 +228,11 @@ Every skill, hook, and MCP tool description must repeat these:
 
 ## 7. Docs to write alongside the code
 
+Written:
+
 - `docs/adapters/claude-code.md` — install skill, add MCP, enable hook
-- `docs/adapters/other-agents.md` — Codex, Cursor, Copilot, generic shell
-- README section "Use from a coding agent" with the three commands and the MCP snippet
+- `docs/adapters/other-agents.md` — Codex, Cursor, Copilot, generic shell. Paths were checked against current Codex, Cursor, and Copilot docs when this was written.
+- README section "Use from a coding agent" with `whyline why`, `whyline capture`, `whyline check`, and the MCP snippet
 
 ## 8. Out of scope
 
