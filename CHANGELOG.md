@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Product specification, architecture, schema contract, roadmap, quality bar, agent integration contract, and Claude Code operating manual.
+- Python package skeleton: uv project with hatchling, `src/` layout, `whyline` console script with a `version` command, ruff, mypy strict, and pytest.
 
 ### Changed
 
