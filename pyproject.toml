@@ -39,6 +39,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/whyline"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"skills/whyline" = "whyline/bundled/whyline-skill"
+"templates/AGENTS.whyline.md" = "whyline/bundled/AGENTS.whyline.md"
+
 [tool.hatch.build.targets.sdist]
 exclude = [".claude", ".whyline-dev"]
 

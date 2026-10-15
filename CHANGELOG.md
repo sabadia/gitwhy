@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `whyline install-agent` copies the portable skill into `.claude/skills/whyline`, `.agents/skills/whyline`, and `.github/skills/whyline`, appends `templates/AGENTS.whyline.md` to `AGENTS.md` inside a `# whyline-managed` block, and prints the MCP snippet (Claude Code `.mcp.json`, Cursor `.cursor/mcp.json`, Codex `config.toml`). A second run does not duplicate any of it. `--claude` also copies the skill to `~/.claude/skills/whyline`. `--hooks` installs the prepare-commit-msg hook. `whyline uninstall-agent` removes only those managed copies and blocks, and leaves text you wrote.
 - Portable agent skill at `skills/whyline/`: `SKILL.md` tells an agent when to recall a reason and when to capture a draft, and forbids inventing fields or affirming. `scripts/capture.sh` and `scripts/why.sh` call the CLI. `capture.sh` fails if whyline is missing; `why.sh` exits 0 and says there is no record.
 - Product specification, architecture, schema contract, roadmap, quality bar, agent integration contract, and Claude Code operating manual.
 - Python package skeleton: uv project with hatchling, `src/` layout, `whyline` console script with a `version` command, ruff, mypy strict, and pytest.

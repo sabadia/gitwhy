@@ -17,6 +17,19 @@ from typer._click.exceptions import ClickException, UsageError
 from typer.core import TyperGroup
 
 from whyline import __version__
+from whyline.adapters.skill import (
+    AgentInstallPlan,
+    CopyStatus,
+    RemoveStatus,
+    SkillCopy,
+    install_agents_file,
+    install_project_skills,
+    install_user_skill,
+    mcp_text,
+    uninstall_agents_file,
+    uninstall_project_skills,
+    uninstall_user_skill,
+)
 from whyline.affirm import affirm_record, require_human, resolve_affirmer
 from whyline.capture import AffirmRequest, CaptureInput, linked_files, prompt_missing
 from whyline.capture import capture as run_capture
@@ -676,6 +689,152 @@ def uninstall_hooks() -> None:
             typer.echo(f"Removed whyline's block from {shown}; your other lines are unchanged.")
         else:
             typer.echo(f"No whyline hook found in {shown}. Nothing changed.")
+
+
+@app.command("install-agent")
+def install_agent(
+    claude: Annotated[
+        bool,
+        typer.Option("--claude", help="Also copy the skill to ~/.claude/skills/whyline."),
+    ] = False,
+    skill: Annotated[
+        bool,
+        typer.Option(
+            "--skill",
+            help="Copy the skill into the project: .claude/skills, .agents/skills, and "
+            ".github/skills.",
+        ),
+    ] = False,
+    mcp: Annotated[
+        bool,
+        typer.Option("--mcp", help="Print the MCP config snippet. Does not write it."),
+    ] = False,
+    agents_md: Annotated[
+        bool,
+        typer.Option("--agents-md", help="Append the managed block to AGENTS.md."),
+    ] = False,
+    hooks: Annotated[
+        bool,
+        typer.Option("--hooks", help="Also install the prepare-commit-msg git hook."),
+    ] = False,
+) -> None:
+    """Install the skill and the AGENTS.md snippet into this repository.
+
+    With no flags: copy the skill into `.claude/skills/whyline`, `.agents/skills/whyline`,
+    and `.github/skills/whyline`, append `templates/AGENTS.whyline.md` to AGENTS.md inside
+    a `# whyline-managed` block, and print the MCP config snippet. Safe to run again: a
+    second run does not add a second block or a second copy of the skill.
+
+    Pass any flag to do only that piece. `--claude` copies the skill to
+    `~/.claude/skills/whyline` (your home directory, not the repo). `--mcp` only prints
+    the snippet. `--hooks` also installs the prepare-commit-msg hook, with the same
+    refusal rules as `install-hooks` (exit 5, file unchanged). The opt-in pre-commit
+    check is not installed here; use `install-hooks --check` for that.
+
+    Exits 2 outside a git repository, 4 when this installation has no skill files, and
+    5 when `--hooks` refuses to write a hook.
+    """
+    root = repo_root(Path.cwd())
+    plan = AgentInstallPlan.from_flags(
+        skill=skill,
+        claude_user=claude,
+        agents_md=agents_md,
+        mcp=mcp,
+        hooks=hooks,
+    )
+    if plan.skill:
+        for copy in install_project_skills(root):
+            _report_copy(copy, root)
+    if plan.claude_user:
+        _report_copy(install_user_skill(), root)
+    if plan.agents_md:
+        path, status = install_agents_file(root)
+        shown = _display_path(path, root)
+        if status is CopyStatus.CREATED:
+            typer.echo(f"Created {shown} with the whyline block.")
+        elif status is CopyStatus.UPDATED:
+            typer.echo(f"Updated whyline's block in {shown}.")
+        else:
+            typer.echo(f"{shown} already has the whyline block. Nothing changed.")
+    if plan.mcp:
+        typer.echo(mcp_text(), nl=False)
+    if hooks:
+        result = install_hook(root, PREPARE_COMMIT_MSG)
+        shown = _display_path(result.path, root)
+        if result.status is InstallStatus.CREATED:
+            typer.echo(f"Installed {result.hook} hook: {shown}")
+        elif result.status is InstallStatus.UPDATED:
+            typer.echo(f"Updated whyline's block in {shown}")
+        elif result.status is InstallStatus.UNCHANGED:
+            typer.echo(f"{result.hook} hook already installed: {shown}. Nothing changed.")
+        elif result.status is InstallStatus.HOOKS_PATH:
+            typer.echo(f"# Add to {shown}:")
+            typer.echo(result.snippet, nl=False)
+            raise HookConflictError(
+                f"core.hooksPath is set, so whyline did not write into {shown}.",
+                hint="Add the lines printed above to that file (create it with `#!/bin/sh` "
+                "if needed, and make it executable).",
+            )
+        else:
+            typer.echo(f"# Add to {shown}:")
+            typer.echo(result.snippet, nl=False)
+            raise HookConflictError(
+                f"{shown} already exists and is not managed by whyline; left unchanged.",
+                hint="Add the lines printed above yourself.",
+            )
+
+
+@app.command("uninstall-agent")
+def uninstall_agent() -> None:
+    """Remove whyline's skill copies and the managed AGENTS.md block.
+
+    Only a skill directory that contains whyline's marker is removed, and only the files
+    whyline copied. A file you added next to the skill stays. In AGENTS.md, only the lines
+    between the `# whyline-managed` markers are removed. A prepare-commit-msg or pre-commit
+    hook whyline installed is removed the same way `uninstall-hooks` removes it. Records,
+    config, and any other text stay.
+
+    Exits 2 outside a git repository and 4 when this installation has no skill files.
+    """
+    root = repo_root(Path.cwd())
+    removed = uninstall_project_skills(root)
+    if removed:
+        for path in removed:
+            typer.echo(f"Removed {_display_path(path, root)}.")
+    else:
+        typer.echo("No managed project skill copy found.")
+    user = uninstall_user_skill()
+    if user is not None:
+        typer.echo(f"Removed {_display_path(user, root)}.")
+    path, status = uninstall_agents_file(root)
+    shown = _display_path(path, root)
+    if status is RemoveStatus.REMOVED_FILE:
+        typer.echo(f"Removed {shown} (it held only whyline's block).")
+    elif status is RemoveStatus.REMOVED_BLOCK:
+        typer.echo(f"Removed whyline's block from {shown}; your other lines are unchanged.")
+    else:
+        typer.echo(f"No whyline block found in {shown}. Nothing changed.")
+    for hook in MANAGED_HOOKS:
+        hook_path, hook_status = uninstall_hook(root, hook)
+        if hook_status is UninstallStatus.NOT_INSTALLED:
+            continue
+        hook_shown = _display_path(hook_path, root)
+        if hook_status is UninstallStatus.REMOVED_FILE:
+            typer.echo(f"Removed {hook_shown} (it held only whyline's block).")
+        else:
+            typer.echo(
+                f"Removed whyline's block from {hook_shown}; your other lines are unchanged."
+            )
+
+
+def _report_copy(copy: SkillCopy, root: Path) -> None:
+    shown = _display_path(copy.path, root)
+    if copy.status is CopyStatus.CREATED:
+        typer.echo(f"Installed skill: {shown}")
+    elif copy.status is CopyStatus.UPDATED:
+        typer.echo(f"Updated skill: {shown}")
+    else:
+        typer.echo(f"Skill already installed: {shown}. Nothing changed.")
 
 
 def _display_path(path: Path, root: Path) -> str:
