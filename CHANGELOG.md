@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Root `--help` lists the exit codes.
 - `whyline init` creates `.whyline/` (config, schema-version, records, and a `.gitignore` for the local pending file) at the repository root. Safe to rerun; `--force` resets only the config and never touches records.
 - Layered config loading: built-in defaults < user config (`$WHYLINE_CONFIG_HOME`, `$XDG_CONFIG_HOME/whyline`, or `~/.config/whyline`) < project `.whyline/config.yml`.
+- `whyline show <id>` prints one record under a DRAFT or AFFIRMED banner, showing empty fields as `(none)`; `whyline list` lists records newest first with `--status`, `--path`, `--author`, and `--json`, warning on and skipping unreadable files.
 
 ### Fixed
 

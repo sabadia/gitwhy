@@ -2,6 +2,7 @@
 
 import json
 import sys
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -18,6 +19,7 @@ from whyline import __version__
 from whyline.errors import ExitCode, WhylineError
 from whyline.gitio import repo_root
 from whyline.models import render_record_json_schema
+from whyline.render import filter_records, render_list_line, render_record
 from whyline.store import WHYLINE_DIRNAME, RecordStore, initialize
 
 EXIT_CODES_HELP = (
@@ -165,3 +167,88 @@ def init(
             typer.echo(f"  unchanged {show(path)}")
     if result.changed:
         typer.echo("Commit .whyline/ so the records travel with the repository.")
+
+
+class StatusFilter(StrEnum):
+    """Values accepted by ``whyline list --status``."""
+
+    draft = "draft"
+    affirmed = "affirmed"
+
+
+class AuthorFilter(StrEnum):
+    """Values accepted by ``whyline list --author``."""
+
+    human = "human"
+    agent = "agent"
+
+
+@app.command()
+def show(
+    record_id: Annotated[str, typer.Argument(metavar="ID", help="Record id (a UUID).")],
+    json_output: JsonOption = False,
+) -> None:
+    """Print one record, with a DRAFT or AFFIRMED banner.
+
+    A draft is a claim, not a confirmed reason. Empty fields print as (none).
+    --json prints the raw record with no banner.
+
+    Exits 1 for a malformed id, 2 outside an initialized repository, 4 if the record file is
+    corrupt, 6 if it uses a newer schema, and 9 if no record has that id.
+    """
+    _, store = open_store()
+    record = store.load(record_id)
+    if json_output:
+        emit_json(record.model_dump(mode="json"))
+    else:
+        typer.echo(render_record(record))
+
+
+@app.command("list")
+def list_records(
+    status: Annotated[
+        StatusFilter | None, typer.Option("--status", help="Only draft or only affirmed records.")
+    ] = None,
+    path: Annotated[
+        str | None,
+        typer.Option(
+            "--path", metavar="PREFIX", help="Only records linking a path with this prefix."
+        ),
+    ] = None,
+    author: Annotated[
+        AuthorFilter | None, typer.Option("--author", help="Only records by a human or an agent.")
+    ] = None,
+    json_output: JsonOption = False,
+) -> None:
+    """List records, newest first.
+
+    Files that cannot be read are skipped with a warning on stderr; the rest are still listed.
+    --json prints {"records": [...], "skipped": [{"message", "exit_code"}]}.
+
+    Exits 0 even when some files are skipped, 1 for a bad filter value, 2 outside an initialized
+    repository, and 6 if the repository uses a newer schema.
+    """
+    _, store = open_store()
+    result = store.list()
+    for error in result.errors:
+        typer.echo(f"warning: {error}", err=True)
+    records = filter_records(
+        result.records,
+        status=None if status is None else status.value,
+        path_prefix=path,
+        author_kind=None if author is None else author.value,
+    )
+    if json_output:
+        emit_json(
+            {
+                "records": [r.model_dump(mode="json") for r in records],
+                "skipped": [
+                    {"message": str(e), "exit_code": int(e.exit_code)} for e in result.errors
+                ],
+            }
+        )
+    elif not records:
+        typer.echo("No records.")
+    else:
+        for record in records:
+            typer.echo(render_list_line(record))
