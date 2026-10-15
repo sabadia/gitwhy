@@ -1,7 +1,7 @@
 {
-  "name": "gitwhy",
+  "name": "intentline",
   "version": "0.1.0",
-  "description": "Drafts one Gitwhy record when a Claude Code session stops. It does not affirm. Install the skill separately with gitwhy install-agent.",
+  "description": "Drafts one Intentline record when a Claude Code session stops. It does not affirm. Install the skill separately with intentline install-agent.",
   "author": {
     "name": "Mahamudul Hasan"
   }

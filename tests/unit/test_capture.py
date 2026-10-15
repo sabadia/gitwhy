@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from gitwhy.capture import (
+from intentline.capture import (
     FALSIFIER_QUESTION,
     GOAL_QUESTION,
     REJECTED_QUESTION,
@@ -18,7 +18,7 @@ from gitwhy.capture import (
     prompt_missing,
     resolve_files,
 )
-from gitwhy.errors import AffirmRefusedError, ExitCode, UsageError
+from intentline.errors import AffirmRefusedError, ExitCode, UsageError
 from tests.conftest import uuid7
 
 NOW = datetime(2026, 10, 15, 13, 4, 11, tzinfo=UTC)
@@ -203,7 +203,7 @@ def test_capture_affirm_gate_runs_before_the_store_is_touched(tmp_path: Path) ->
             cwd=tmp_path,
             affirm=_request(interactive=False),
         )
-    assert not (tmp_path / ".gitwhy").exists()
+    assert not (tmp_path / ".intentline").exists()
 
 
 # --- interactive questions ----------------------------------------------------------------

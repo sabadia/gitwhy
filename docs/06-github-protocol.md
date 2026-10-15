@@ -1,6 +1,6 @@
 # 06 — GitHub operations and agent protocol
 
-**Product:** Gitwhy  
+**Product:** Intentline  
 This is the procedure Claude Code follows. Do not improvise a different board or a different repo.
 
 ## 1. Preconditions
@@ -23,7 +23,7 @@ Use that value everywhere below as `OWNER`. Never hardcode a username.
 
 ```bash
 # Create if missing. If it already exists, clone it instead.
-gh repo create gitwhy --public \
+gh repo create intentline --public \
   --description "Git-native intent ledger. Capture why a change exists, and get it back at review and debug time." \
   --license apache-2.0 \
   --clone
@@ -39,7 +39,7 @@ Commit, in order:
 2. `CLAUDE.md`
 3. `docs/**`
 4. `README.md` (product README, see section 6)
-5. `.gitignore` (Python, `.venv`, `dist`, `.gitwhy/pending`, `__pycache__`)
+5. `.gitignore` (Python, `.venv`, `dist`, `.intentline/pending`, `__pycache__`)
 
 First commit message:
 
@@ -62,10 +62,10 @@ gh api graphql -f query='
     createProjectV2(input: {ownerId: $owner, title: $title}) {
       projectV2 { id number url }
     }
-  }' -f owner="$OWNER_ID" -f title="Gitwhy"
+  }' -f owner="$OWNER_ID" -f title="Intentline"
 ```
 
-Save the project id and URL in `.gitwhy-dev/project.json` inside the gitwhy repo (gitignored) and also echo them in the issue comment for 0.1 so a future session can find them via:
+Save the project id and URL in `.intentline-dev/project.json` inside the intentline repo (gitignored) and also echo them in the issue comment for 0.1 so a future session can find them via:
 
 ```bash
 gh project list --owner "$OWNER" --format json
@@ -115,7 +115,7 @@ Create on the repo:
 For every row in `docs/04-roadmap.md`:
 
 ```bash
-gh issue create --repo "$OWNER/gitwhy" \
+gh issue create --repo "$OWNER/intentline" \
   --title "0.1 Create repository, license, and project board" \
   --label "phase-0,area-meta,priority-p0,type-chore" \
   --milestone "Phase 0 — Foundation" \
@@ -140,11 +140,11 @@ Run, in order:
 ```bash
 gh auth status
 OWNER=$(gh api user --jq .login)
-gh repo view "$OWNER/gitwhy" --json name,url,defaultBranchRef
+gh repo view "$OWNER/intentline" --json name,url,defaultBranchRef
 git fetch --all --prune
 git status
 git log --oneline -20
-gh issue list --repo "$OWNER/gitwhy" --state open --limit 50
+gh issue list --repo "$OWNER/intentline" --state open --limit 50
 gh project list --owner "$OWNER"
 # list items and their Status — use gh project item-list
 ```
@@ -221,7 +221,7 @@ When the user says "do X" and X is not an issue, create the issue, add it to the
 
 End every session with:
 
-- Repo: `https://github.com/OWNER/gitwhy`
+- Repo: `https://github.com/OWNER/intentline`
 - Board: the project URL
 - Completed: `#n title` list
 - In progress: `#n title`

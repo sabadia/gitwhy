@@ -1,4 +1,4 @@
-"""``gitwhy show`` and ``gitwhy list`` against real git repositories."""
+"""``intentline show`` and ``intentline list`` against real git repositories."""
 
 import json
 from pathlib import Path
@@ -7,10 +7,10 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.cli import app
-from gitwhy.models import Record
-from gitwhy.render import BANNER_AFFIRMED, BANNER_DRAFT
-from gitwhy.store import RecordStore, dump_yaml, initialize
+from intentline.cli import app
+from intentline.models import Record
+from intentline.render import BANNER_AFFIRMED, BANNER_DRAFT
+from intentline.store import RecordStore, dump_yaml, initialize
 from tests.conftest import plain, record_data, uuid7
 
 runner = CliRunner()
@@ -30,7 +30,7 @@ def repo(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _save(repo: Path, n: int, **overrides: Any) -> None:
-    RecordStore(repo / ".gitwhy").save(Record.model_validate(record_data(n, **overrides)))
+    RecordStore(repo / ".intentline").save(Record.model_validate(record_data(n, **overrides)))
 
 
 def _run(*args: str) -> Result:
@@ -58,10 +58,10 @@ def test_show_affirmed_has_affirmed_banner(repo: Path) -> None:
 
 
 def test_show_json_is_raw_record_without_banner(repo: Path) -> None:
-    gitwhy = repo / ".gitwhy"
+    intentline = repo / ".intentline"
     data = Record.model_validate(record_data(1)).model_dump(mode="json")
     data["future_field"] = "kept"
-    (gitwhy / "records" / f"{uuid7(1)}.yml").write_text(dump_yaml(data), encoding="utf-8")
+    (intentline / "records" / f"{uuid7(1)}.yml").write_text(dump_yaml(data), encoding="utf-8")
     result = _run("show", str(uuid7(1)), "--json")
     assert result.exit_code == 0
     assert json.loads(result.stdout) == data
@@ -79,7 +79,7 @@ def test_show_malformed_id_exits_1(repo: Path) -> None:
 
 
 def test_show_corrupt_yaml_exits_4(repo: Path) -> None:
-    (repo / ".gitwhy" / "records" / f"{uuid7(1)}.yml").write_text("goal: [x\n")
+    (repo / ".intentline" / "records" / f"{uuid7(1)}.yml").write_text("goal: [x\n")
     result = _run("show", str(uuid7(1)))
     assert result.exit_code == 4
     assert "is not valid YAML" in plain(result.output)
@@ -108,7 +108,7 @@ def test_list_newest_first_with_banners(repo: Path) -> None:
 def test_list_corrupt_file_warns_and_lists_others(repo: Path) -> None:
     _save(repo, 1)
     _save(repo, 3)
-    (repo / ".gitwhy" / "records" / f"{uuid7(2)}.yml").write_text("not: [valid\n")
+    (repo / ".intentline" / "records" / f"{uuid7(2)}.yml").write_text("not: [valid\n")
     result = _run("list")
     assert result.exit_code == 0
     assert result.stderr.startswith("warning: ")
@@ -120,7 +120,7 @@ def test_list_corrupt_file_warns_and_lists_others(repo: Path) -> None:
 def test_list_newer_schema_file_is_skipped_with_warning(repo: Path) -> None:
     data = Record.model_validate(record_data(1)).model_dump(mode="json")
     data["schema_version"] = 2
-    (repo / ".gitwhy" / "records" / f"{uuid7(1)}.yml").write_text(dump_yaml(data))
+    (repo / ".intentline" / "records" / f"{uuid7(1)}.yml").write_text(dump_yaml(data))
     result = _run("list", "--json")
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
@@ -186,4 +186,4 @@ def test_not_initialized_exits_2(
     monkeypatch.chdir(git_repo)
     result = _run(*args)
     assert result.exit_code == 2
-    assert "gitwhy init" in plain(result.output)
+    assert "intentline init" in plain(result.output)

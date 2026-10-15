@@ -1,5 +1,5 @@
 name: Bug
-description: Gitwhy did something wrong.
+description: Intentline did something wrong.
 labels: ["type-fix"]
 body:
   - type: markdown
@@ -11,7 +11,7 @@ body:
     attributes:
       label: Command
       description: The exact command you ran.
-      placeholder: gitwhy why src/app.py:40
+      placeholder: intentline why src/app.py:40
     validations:
       required: true
   - type: input
@@ -59,7 +59,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: gitwhy version
-      description: Output of `gitwhy version`, plus your OS and Python version.
+      label: intentline version
+      description: Output of `intentline version`, plus your OS and Python version.
     validations:
       required: true

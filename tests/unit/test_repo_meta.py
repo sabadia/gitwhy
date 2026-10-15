@@ -38,7 +38,7 @@ def test_changelog_has_unreleased_section() -> None:
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "keepachangelog.com" in text
     assert "## [Unreleased]" in text
-    assert "[Unreleased]: https://github.com/sabadia/gitwhy/" in text
+    assert "[Unreleased]: https://github.com/sabadia/intentline/" in text
 
 
 def test_contributing_states_the_rules() -> None:

@@ -2,9 +2,9 @@
 
 import pytest
 
-from gitwhy.check import Verdict, decide, is_ignored
-from gitwhy.gitio import FileChange, _parse_numstat
-from gitwhy.models import DEFAULT_CHECK_IGNORE
+from intentline.check import Verdict, decide, is_ignored
+from intentline.gitio import FileChange, _parse_numstat
+from intentline.models import DEFAULT_CHECK_IGNORE
 from tests.conftest import uuid7
 
 IGNORE = list(DEFAULT_CHECK_IGNORE)
@@ -17,8 +17,8 @@ IGNORE = list(DEFAULT_CHECK_IGNORE)
         ("sub/uv.lock", True),  # pattern without '/' matches the name anywhere
         ("Cargo.lock", True),
         ("deep/dir/yarn.lock", True),
-        (".gitwhy/records/x.yml", True),
-        (".gitwhy/config.yml", True),
+        (".intentline/records/x.yml", True),
+        (".intentline/config.yml", True),
         ("schema/record.schema.json", True),
         ("src/api_generated.py", True),
         ("src/app.py", False),

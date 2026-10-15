@@ -10,10 +10,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.cli import app
-from gitwhy.errors import NoRepoError
-from gitwhy.gitio import commit_message, git_path, gitwhy_ids
-from gitwhy.hooks import (
+from intentline.cli import app
+from intentline.errors import NoRepoError
+from intentline.gitio import commit_message, git_path, intentline_ids
+from intentline.hooks import (
     BEGIN_MARKER,
     END_MARKER,
     MARKER,
@@ -22,7 +22,7 @@ from gitwhy.hooks import (
     install_hook,
     managed_block,
 )
-from gitwhy.store import RecordStore, initialize, write_pending
+from intentline.store import RecordStore, initialize, write_pending
 from tests.conftest import MakeRecord, plain, uuid7
 
 runner = CliRunner()
@@ -46,7 +46,7 @@ def repo(git_repo: Path, make_record: MakeRecord) -> Path:
     _git(git_repo, "config", "user.email", "test@example.com")
     _git(git_repo, "config", "commit.gpgsign", "false")
     initialize(git_repo)
-    RecordStore(git_repo / ".gitwhy").save(make_record(1))
+    RecordStore(git_repo / ".intentline").save(make_record(1))
     return git_repo
 
 
@@ -72,11 +72,11 @@ def _commit(repo: Path, message: str, *, path_env: str) -> subprocess.CompletedP
     )
 
 
-def _path_with_gitwhy() -> str:
+def _path_with_intentline() -> str:
     return VENV_BIN + os.pathsep + os.environ["PATH"]
 
 
-def _path_without_gitwhy() -> str:
+def _path_without_intentline() -> str:
     git_dir = str(Path(shutil.which("git") or "/usr/bin/git").parent)
     return os.pathsep.join(dict.fromkeys([git_dir, "/usr/bin", "/bin"]))
 
@@ -121,7 +121,7 @@ def test_install_refuses_foreign_hook_exit_5_file_unchanged(
     assert result.exit_code == 5
     assert hook.read_text(encoding="utf-8") == foreign
     assert managed_block() in result.stdout, "the snippet to add by hand goes to stdout"
-    assert "not managed by gitwhy" in plain(result.stderr)
+    assert "not managed by intentline" in plain(result.stderr)
 
 
 def test_uninstall_removes_block_and_keeps_user_lines(
@@ -178,7 +178,7 @@ def test_install_refreshes_an_outdated_block_and_keeps_user_lines(
     )
     result = _cli(repo, monkeypatch, "install-hooks")
     assert result.exit_code == 0
-    assert "Updated gitwhy's block" in plain(result.output)
+    assert "Updated intentline's block" in plain(result.output)
     text = hook.read_text(encoding="utf-8")
     assert text == f"#!/bin/sh\necho before\n{managed_block()}echo after\n"
     assert hook.stat().st_mode & stat.S_IXUSR
@@ -237,19 +237,19 @@ def test_commit_gets_pending_trailer_and_pending_is_cleared(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _cli(repo, monkeypatch, "install-hooks")
-    write_pending(repo / ".gitwhy", uuid7(1))
-    completed = _commit(repo, "Close invoices daily", path_env=_path_with_gitwhy())
+    write_pending(repo / ".intentline", uuid7(1))
+    completed = _commit(repo, "Close invoices daily", path_env=_path_with_intentline())
     assert completed.returncode == 0, completed.stderr
     message = commit_message("HEAD", repo)
-    assert gitwhy_ids(message, repo) == [uuid7(1)]
-    assert message.startswith("Close invoices daily\n\nGitwhy-Id: ")
-    assert not (repo / ".gitwhy" / "pending").exists()
-    assert f"added Gitwhy-Id: {uuid7(1)}" in completed.stderr
+    assert intentline_ids(message, repo) == [uuid7(1)]
+    assert message.startswith("Close invoices daily\n\nIntentline-Id: ")
+    assert not (repo / ".intentline" / "pending").exists()
+    assert f"added Intentline-Id: {uuid7(1)}" in completed.stderr
 
 
 def test_commit_without_pending_is_untouched(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _cli(repo, monkeypatch, "install-hooks")
-    completed = _commit(repo, "Plain change", path_env=_path_with_gitwhy())
+    completed = _commit(repo, "Plain change", path_env=_path_with_intentline())
     assert completed.returncode == 0, completed.stderr
     assert commit_message("HEAD", repo) == "Plain change\n"
 
@@ -258,40 +258,40 @@ def test_existing_trailer_is_kept_and_pending_survives(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _cli(repo, monkeypatch, "install-hooks")
-    write_pending(repo / ".gitwhy", uuid7(1))
+    write_pending(repo / ".intentline", uuid7(1))
     completed = _commit(
-        repo, f"Already linked\n\nGitwhy-Id: {uuid7(7)}", path_env=_path_with_gitwhy()
+        repo, f"Already linked\n\nIntentline-Id: {uuid7(7)}", path_env=_path_with_intentline()
     )
     assert completed.returncode == 0, completed.stderr
-    assert gitwhy_ids(commit_message("HEAD", repo), repo) == [uuid7(7)]
-    assert (repo / ".gitwhy" / "pending").read_text() == f"{uuid7(1)}\n"
+    assert intentline_ids(commit_message("HEAD", repo), repo) == [uuid7(7)]
+    assert (repo / ".intentline" / "pending").read_text() == f"{uuid7(1)}\n"
 
 
-def test_commit_succeeds_when_gitwhy_is_not_on_path(
+def test_commit_succeeds_when_intentline_is_not_on_path(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _cli(repo, monkeypatch, "install-hooks")
-    write_pending(repo / ".gitwhy", uuid7(1))
-    completed = _commit(repo, "No gitwhy here", path_env=_path_without_gitwhy())
+    write_pending(repo / ".intentline", uuid7(1))
+    completed = _commit(repo, "No intentline here", path_env=_path_without_intentline())
     assert completed.returncode == 0, completed.stderr
-    assert "gitwhy: not found on PATH" in completed.stderr
-    assert commit_message("HEAD", repo) == "No gitwhy here\n"
-    assert (repo / ".gitwhy" / "pending").exists()
+    assert "intentline: not found on PATH" in completed.stderr
+    assert commit_message("HEAD", repo) == "No intentline here\n"
+    assert (repo / ".intentline" / "pending").exists()
 
 
 def test_commit_succeeds_when_the_hook_step_fails(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _cli(repo, monkeypatch, "install-hooks")
-    write_pending(repo / ".gitwhy", uuid7(1))
-    (repo / ".gitwhy" / "pending").chmod(0o000)
+    write_pending(repo / ".intentline", uuid7(1))
+    (repo / ".intentline" / "pending").chmod(0o000)
     try:
-        completed = _commit(repo, "Unreadable pending", path_env=_path_with_gitwhy())
+        completed = _commit(repo, "Unreadable pending", path_env=_path_with_intentline())
     finally:
-        (repo / ".gitwhy" / "pending").chmod(0o644)
+        (repo / ".intentline" / "pending").chmod(0o644)
     assert completed.returncode == 0, completed.stderr
     if os.geteuid() != 0:  # root can read the file anyway
-        assert "could not add a Gitwhy-Id trailer" in completed.stderr
+        assert "could not add a Intentline-Id trailer" in completed.stderr
 
 
 # --- the hook step directly ---------------------------------------------------------------------
@@ -300,12 +300,12 @@ def test_commit_succeeds_when_the_hook_step_fails(
 def test_hook_command_with_relative_message_file(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    write_pending(repo / ".gitwhy", uuid7(1))
+    write_pending(repo / ".intentline", uuid7(1))
     (repo / ".git" / "COMMIT_EDITMSG").write_text("Subject\n", encoding="utf-8")
     result = _cli(repo, monkeypatch, "hook", "prepare-commit-msg", ".git/COMMIT_EDITMSG", "message")
     assert result.exit_code == 0
     text = (repo / ".git" / "COMMIT_EDITMSG").read_text(encoding="utf-8")
-    assert gitwhy_ids(text, repo) == [uuid7(1)]
+    assert intentline_ids(text, repo) == [uuid7(1)]
 
 
 def test_hook_command_never_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -313,7 +313,7 @@ def test_hook_command_never_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     plain_dir.mkdir()
     result = _cli(plain_dir, monkeypatch, "hook", "prepare-commit-msg", "MSG")
     assert result.exit_code == 0
-    assert "could not add a Gitwhy-Id trailer" in plain(result.stderr)
+    assert "could not add a Intentline-Id trailer" in plain(result.stderr)
 
 
 def test_hook_command_is_hidden_from_help(monkeypatch: pytest.MonkeyPatch, repo: Path) -> None:
@@ -350,9 +350,9 @@ def test_git_path_outside_a_repository(tmp_path: Path) -> None:
 
 
 def test_apply_pending_trailer_keeps_existing_link(repo: Path) -> None:
-    write_pending(repo / ".gitwhy", uuid7(1))
+    write_pending(repo / ".intentline", uuid7(1))
     message = repo / "MSG"
-    message.write_text(f"Subject\n\nGitwhy-Id: {uuid7(7)}\n", encoding="utf-8")
+    message.write_text(f"Subject\n\nIntentline-Id: {uuid7(7)}\n", encoding="utf-8")
     assert apply_pending_trailer(repo, message) is None
-    assert message.read_text(encoding="utf-8") == f"Subject\n\nGitwhy-Id: {uuid7(7)}\n"
-    assert (repo / ".gitwhy" / "pending").exists()
+    assert message.read_text(encoding="utf-8") == f"Subject\n\nIntentline-Id: {uuid7(7)}\n"
+    assert (repo / ".intentline" / "pending").exists()

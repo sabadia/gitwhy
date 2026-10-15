@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from gitwhy import __version__
+from intentline import __version__
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "publish.yml"
@@ -28,13 +28,13 @@ def _real_publish_at(text: str) -> int:
 def unguarded_publish(text: str) -> list[str]:
     """Name how a workflow could upload without an explicit yes.
 
-    A missing dry-run, a missing GITWHY_PUBLISH gate, ``uv publish`` before
+    A missing dry-run, a missing INTENTLINE_PUBLISH gate, ``uv publish`` before
     that gate, a missing token, or a literal token are failures.
     """
     gaps: list[str] = []
     if "uv publish --dry-run" not in text:
         gaps.append("no dry-run")
-    gate_at = text.find("GITWHY_PUBLISH")
+    gate_at = text.find("INTENTLINE_PUBLISH")
     if gate_at == -1:
         gaps.append("publish is not gated")
     upload_at = _real_publish_at(text)
@@ -54,11 +54,11 @@ def test_unguarded_publish_is_rejected() -> None:
         "uv publish appears before its gate",
         "publish has no token",
     ]
-    assert unguarded_publish("uv publish --dry-run\nGITWHY_PUBLISH\nrun: uv publish\n") == [
+    assert unguarded_publish("uv publish --dry-run\nINTENTLINE_PUBLISH\nrun: uv publish\n") == [
         "publish has no token",
     ]
     literal = (
-        "uv publish --dry-run\nGITWHY_PUBLISH\nsecrets.UV_PUBLISH_TOKEN\n"
+        "uv publish --dry-run\nINTENTLINE_PUBLISH\nsecrets.UV_PUBLISH_TOKEN\n"
         "run: uv publish\npypi-secret\n"
     )
     assert "workflow embeds a token" in unguarded_publish(literal)
@@ -78,12 +78,12 @@ def test_version_is_0_1_0_and_the_changelog_has_release_notes() -> None:
     assert plugin["version"] == "0.1.0"
     assert "## [0.1.0] - 2026-10-15" in changelog
     assert "## [Unreleased]" in changelog
-    assert "GITWHY_PUBLISH" in changelog
+    assert "INTENTLINE_PUBLISH" in changelog
 
 
 def test_core_source_does_not_import_a_network_client() -> None:
     offenders: list[str] = []
-    for path in (ROOT / "src" / "gitwhy").rglob("*.py"):
+    for path in (ROOT / "src" / "intentline").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         for name in NETWORK:
             if name in text:

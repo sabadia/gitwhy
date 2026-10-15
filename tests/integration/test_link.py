@@ -1,4 +1,4 @@
-"""``gitwhy link`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
+"""``intentline link`` against real git repositories (docs/03 section 4, docs/05 section 2)."""
 
 import json
 import subprocess
@@ -7,17 +7,17 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.cli import app
-from gitwhy.errors import UsageError
-from gitwhy.gitio import (
+from intentline.cli import app
+from intentline.errors import UsageError
+from intentline.gitio import (
     commit_message,
     current_branch,
-    gitwhy_ids,
     head_commit,
+    intentline_ids,
     operation_in_progress,
     remote_refs_containing,
 )
-from gitwhy.store import RecordStore, initialize, read_pending
+from intentline.store import RecordStore, initialize, read_pending
 from tests.conftest import MakeRecord, plain, uuid7
 
 runner = CliRunner()
@@ -47,7 +47,7 @@ def repo(git_repo: Path, make_record: MakeRecord) -> Path:
     _git(git_repo, "config", "user.email", "test@example.com")
     _git(git_repo, "config", "commit.gpgsign", "false")
     initialize(git_repo)
-    store = RecordStore(git_repo / ".gitwhy")
+    store = RecordStore(git_repo / ".intentline")
     store.save(make_record(1))
     store.save(make_record(2))
     _commit(git_repo, "a.py", "Add a\n\nExplain a.")
@@ -76,7 +76,7 @@ def _link(repo: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> Result:
 def test_link_writes_pending(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     result = _link(repo, monkeypatch, str(uuid7(1)))
     assert result.exit_code == 0, result.output
-    assert (repo / ".gitwhy" / "pending").read_text() == f"{uuid7(1)}\n"
+    assert (repo / ".intentline" / "pending").read_text() == f"{uuid7(1)}\n"
     assert "Linked" in plain(result.output)
 
 
@@ -92,7 +92,7 @@ def test_link_reports_replaced_pending(repo: Path, monkeypatch: pytest.MonkeyPat
         "already_linked": False,
         "replaced_pending": str(uuid7(1)),
     }
-    assert read_pending(repo / ".gitwhy") == uuid7(2)
+    assert read_pending(repo / ".intentline") == uuid7(2)
 
 
 def test_link_says_which_pending_record_it_replaced(
@@ -116,7 +116,7 @@ def test_link_unknown_id_exits_9_and_writes_nothing(
 ) -> None:
     result = _link(repo, monkeypatch, str(uuid7(99)))
     assert result.exit_code == 9
-    assert not (repo / ".gitwhy" / "pending").exists()
+    assert not (repo / ".intentline" / "pending").exists()
 
 
 def test_link_malformed_id_exits_1(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -146,12 +146,12 @@ def test_amend_head_adds_trailer_and_keeps_message(
     after = _git(repo, "rev-parse", "HEAD")
     assert after != before
     message = commit_message("HEAD", repo)
-    assert message == f"Add a\n\nExplain a.\n\nGitwhy-Id: {uuid7(1)}\n"
+    assert message == f"Add a\n\nExplain a.\n\nIntentline-Id: {uuid7(1)}\n"
     raw = _git(repo, "cat-file", "commit", "HEAD")
-    assert raw.endswith(f"Gitwhy-Id: {uuid7(1)}"), "no trailing blank lines in the object"
-    assert gitwhy_ids(message, repo) == [uuid7(1)]
+    assert raw.endswith(f"Intentline-Id: {uuid7(1)}"), "no trailing blank lines in the object"
+    assert intentline_ids(message, repo) == [uuid7(1)]
     assert _git(repo, "log", "-1", "--format=%an <%ae> %ad") == author_before
-    assert not (repo / ".gitwhy" / "pending").exists()
+    assert not (repo / ".intentline" / "pending").exists()
     assert f"Amended HEAD ({after[:12]})" in plain(result.output)
 
 
@@ -170,7 +170,7 @@ def test_amend_head_keeps_existing_signoff(repo: Path, monkeypatch: pytest.Monke
     _commit(repo, "b.py", "Add b\n\nSigned-off-by: Test Human <test@example.com>")
     assert _link(repo, monkeypatch, str(uuid7(1)), "--amend-head").exit_code == 0
     assert commit_message("HEAD", repo).endswith(
-        f"Signed-off-by: Test Human <test@example.com>\nGitwhy-Id: {uuid7(1)}\n"
+        f"Signed-off-by: Test Human <test@example.com>\nIntentline-Id: {uuid7(1)}\n"
     )
 
 
@@ -219,7 +219,7 @@ def test_amend_head_with_no_commits_exits_1(
     git_repo: Path, monkeypatch: pytest.MonkeyPatch, make_record: MakeRecord
 ) -> None:
     initialize(git_repo)
-    RecordStore(git_repo / ".gitwhy").save(make_record(1))
+    RecordStore(git_repo / ".intentline").save(make_record(1))
     result = _link(git_repo, monkeypatch, str(uuid7(1)), "--amend-head")
     assert result.exit_code == 1
     assert "no commit to amend" in plain(result.output)
@@ -294,11 +294,11 @@ def test_remote_refs_failure_is_reported(repo: Path) -> None:
 
 
 def test_read_pending_tolerates_bad_content(tmp_path: Path) -> None:
-    gitwhy = tmp_path / ".gitwhy"
-    gitwhy.mkdir()
-    assert read_pending(gitwhy) is None
+    intentline = tmp_path / ".intentline"
+    intentline.mkdir()
+    assert read_pending(intentline) is None
     for content in (b"", b"not-a-uuid\n", b"\xff\xfe"):
-        (gitwhy / "pending").write_bytes(content)
-        assert read_pending(gitwhy) is None
-    (gitwhy / "pending").write_text(f"  {uuid7(3)}  \n", encoding="utf-8")
-    assert read_pending(gitwhy) == uuid7(3)
+        (intentline / "pending").write_bytes(content)
+        assert read_pending(intentline) is None
+    (intentline / "pending").write_text(f"  {uuid7(3)}  \n", encoding="utf-8")
+    assert read_pending(intentline) == uuid7(3)

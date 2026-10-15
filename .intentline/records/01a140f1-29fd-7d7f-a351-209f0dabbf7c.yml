@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01a140f1-29fd-7d7f-a351-209f0dabbf7c
+status: draft
+created_at: '2026-10-15T19:01:49Z'
+updated_at: '2026-10-15T19:01:49Z'
+affirmed_at: null
+affirmed_by: null
+author:
+  kind: agent
+  name: null
+  tool: grok
+goal: Rename the project to intentline because PyPI treats gitwhy as too similar to git-why.
+constraints: []
+rejected: []
+assumptions: []
+falsifier: ''
+evidence: []
+links:
+- path: pyproject.toml
+  start_line: null
+  end_line: null
+- path: .github/workflows/publish.yml
+  start_line: null
+  end_line: null
+adr: null
+risks: []
+source:
+  kind: flags
+  ref: null

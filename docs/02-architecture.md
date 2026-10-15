@@ -1,11 +1,11 @@
 # 02 — Architecture
 
-**Product:** Gitwhy  
+**Product:** Intentline  
 **MVP:** CLI + git hooks, no server
 
 ## 1. Shape
 
-Gitwhy is a single Python package that reads and writes files in the git repository it is run from. Git is the database. The working tree is the cache. There is no daemon.
+Intentline is a single Python package that reads and writes files in the git repository it is run from. Git is the database. The working tree is the cache. There is no daemon.
 
 ```mermaid
 flowchart LR
@@ -14,7 +14,7 @@ flowchart LR
     Agent[Coding agent session]
   end
 
-  subgraph gitwhy [gitwhy CLI]
+  subgraph intentline [intentline CLI]
     Capture[capture]
     Affirm[affirm]
     Check[check]
@@ -23,9 +23,9 @@ flowchart LR
   end
 
   subgraph repo [Git repository]
-    YAML[".gitwhy/records/<id>.yml"]
-    Cfg[".gitwhy/config.yml"]
-    Commit["Commit message trailer Gitwhy-Id"]
+    YAML[".intentline/records/<id>.yml"]
+    Cfg[".intentline/config.yml"]
+    Commit["Commit message trailer Intentline-Id"]
     Code[Source files]
   end
 
@@ -46,19 +46,19 @@ flowchart LR
 
 | Component | Responsibility | May do network I/O |
 |---|---|---|
-| `gitwhy.cli` | Typer commands, exit codes, help text | No |
-| `gitwhy.models` | Pydantic models for Record, Config, HunkLink | No |
-| `gitwhy.store` | Read/write `.gitwhy/records`, atomic rename, schema version | No |
-| `gitwhy.gitio` | Trailers, blame, `git log -L`, staged diff stats, repo root | No (local git only) |
-| `gitwhy.capture` | Build a record from flags, prompts, or a session file | No |
-| `gitwhy.recall` | Resolve file:line or sha to records | No |
-| `gitwhy.check` | Decide if a change is missing a record | No |
-| `gitwhy.hooks` | Install/remove git hooks, render hook scripts | No |
-| `gitwhy.adapters.claude` | Emit the Stop hook and draft from stdin `transcript_path` | No |
-| `gitwhy.adapters.skill` | Render and install the portable skill and AGENTS.md snippet | No |
-| `gitwhy.mcp` | Optional stdio MCP server. Imports CLI/store. Not imported by core | No |
-| `gitwhy.errors` | Exception hierarchy and exit codes | No |
-| `gitwhy.render` | Human output and `--json` output | No |
+| `intentline.cli` | Typer commands, exit codes, help text | No |
+| `intentline.models` | Pydantic models for Record, Config, HunkLink | No |
+| `intentline.store` | Read/write `.intentline/records`, atomic rename, schema version | No |
+| `intentline.gitio` | Trailers, blame, `git log -L`, staged diff stats, repo root | No (local git only) |
+| `intentline.capture` | Build a record from flags, prompts, or a session file | No |
+| `intentline.recall` | Resolve file:line or sha to records | No |
+| `intentline.check` | Decide if a change is missing a record | No |
+| `intentline.hooks` | Install/remove git hooks, render hook scripts | No |
+| `intentline.adapters.claude` | Emit the Stop hook and draft from stdin `transcript_path` | No |
+| `intentline.adapters.skill` | Render and install the portable skill and AGENTS.md snippet | No |
+| `intentline.mcp` | Optional stdio MCP server. Imports CLI/store. Not imported by core | No |
+| `intentline.errors` | Exception hierarchy and exit codes | No |
+| `intentline.render` | Human output and `--json` output | No |
 
 No other packages in v1. No `api/`, no `server/`, no `web/`.
 
@@ -66,24 +66,24 @@ No other packages in v1. No `api/`, no `server/`, no `web/`.
 
 ```
 consumer-repo/
-├── .gitwhy/
+├── .intentline/
 │   ├── config.yml          # project config, committed
 │   ├── schema-version      # single line, e.g. "1"
 │   └── records/
 │       ├── 0190....yml
 │       └── 0190....yml
 ├── .git/hooks/
-│   ├── prepare-commit-msg  # installed by gitwhy, not committed
-│   └── pre-commit          # optional, installed by gitwhy
+│   ├── prepare-commit-msg  # installed by intentline, not committed
+│   └── pre-commit          # optional, installed by intentline
 └── src/...
 ```
 
-`.gitwhy/` is committed. Hook scripts are installed into `.git/hooks` (or a managed hooks path via `core.hooksPath` if the user already set one — detect and refuse to clobber; print the exact snippet to add).
+`.intentline/` is committed. Hook scripts are installed into `.git/hooks` (or a managed hooks path via `core.hooksPath` if the user already set one — detect and refuse to clobber; print the exact snippet to add).
 
-Gitwhy's own repo layout:
+Intentline's own repo layout:
 
 ```
-gitwhy/
+intentline/
 ├── CLAUDE.md
 ├── README.md
 ├── LICENSE
@@ -92,14 +92,14 @@ gitwhy/
 ├── uv.lock
 ├── .python-version
 ├── .github/workflows/ci.yml
-├── skills/gitwhy/                 # portable agent skill
+├── skills/intentline/                 # portable agent skill
 │   ├── SKILL.md
 │   ├── references/
 │   └── scripts/
-├── templates/AGENTS.gitwhy.md
+├── templates/AGENTS.intentline.md
 ├── schema/record.schema.json      # generated
 ├── docs/                           # the specs
-├── src/gitwhy/
+├── src/intentline/
 │   ├── __init__.py
 │   ├── cli.py
 │   ├── models.py
@@ -108,7 +108,7 @@ gitwhy/
 │   ├── capture.py
 │   ├── recall.py
 │   ├── check.py
-│   ├── hooks/                      # gitwhy.hooks: installer + prepare-commit-msg step
+│   ├── hooks/                      # intentline.hooks: installer + prepare-commit-msg step
 │   │   ├── __init__.py
 │   │   └── prepare-commit-msg.sh   # managed block installed into .git/hooks
 │   ├── render.py
@@ -116,7 +116,7 @@ gitwhy/
 │   ├── adapters/
 │   │   ├── claude.py
 │   │   └── skill.py
-│   └── mcp.py                      # imported only by the gitwhy-mcp script
+│   └── mcp.py                      # imported only by the intentline-mcp script
 └── tests/
     ├── unit/
     ├── integration/                # real git repos in tmp_path
@@ -130,18 +130,18 @@ gitwhy/
 ```mermaid
 sequenceDiagram
   actor Dev
-  participant CLI as gitwhy capture
+  participant CLI as intentline capture
   participant Store
   participant Git as git
 
-  Dev->>CLI: gitwhy capture
+  Dev->>CLI: intentline capture
   CLI->>Dev: goal? (required)
   CLI->>Dev: rejected alternative? (optional, enter to skip)
   CLI->>Dev: what would prove this wrong? (optional)
   CLI->>Git: staged files and line stats
   CLI->>Store: write draft record
   Store-->>CLI: id
-  CLI-->>Dev: id, path, "run gitwhy link or commit"
+  CLI-->>Dev: id, path, "run intentline link or commit"
 ```
 
 Flags must be able to supply every prompt so agents and scripts never need a TTY: `--goal`, `--rejected`, `--falsifier`, `--assumption` (repeatable), `--constraint` (repeatable), `--file` (repeatable), `--affirm` (human only; refused if stdin is not a TTY unless `--i-am-human` is passed — see security doc).
@@ -154,31 +154,31 @@ The agent adapter does not call an LLM. It reads a session file the user or the 
 
 `prepare-commit-msg` hook:
 
-1. If the message already has a `Gitwhy-Id` trailer, do nothing.
-2. If `.gitwhy/pending` contains an id (written by `gitwhy link` or by capture with `--pending`), append the trailer and clear pending.
+1. If the message already has a `Intentline-Id` trailer, do nothing.
+2. If `.intentline/pending` contains an id (written by `intentline link` or by capture with `--pending`), append the trailer and clear pending.
 3. Otherwise do nothing. Do not block the commit. Blocking is the separate `pre-commit` check, and it is off by default.
 
 ### 4.4 Recall
 
-`gitwhy why src/tax/close.py:88`:
+`intentline why src/tax/close.py:88`:
 
 1. Find repo root.
 2. Ask git which commits last touched that line (`git log -L 88,88:src/tax/close.py` or blame).
-3. For each candidate commit, newest first, parse trailers for `Gitwhy-Id`.
+3. For each candidate commit, newest first, parse trailers for `Intentline-Id`.
 4. Load those records. Also load records whose `links` name that path and an overlapping line range, even without a trailer (covers records written before the commit).
 5. Print status banner, goal, falsifier, rejected, assumptions, evidence, id, commit.
 6. Stop at the first affirmed record unless `--all` is passed. Always show drafts that are newer than the affirmed one, marked DRAFT.
 
-No network. No index daemon. If this is slow, the optimization is a local cache file `.gitwhy/index.json` rebuilt by `gitwhy index`, gitignored, treated as disposable. Do not build the index until a benchmark in CI shows the naive path missing the 100 ms target. YAGNI until then.
+No network. No index daemon. If this is slow, the optimization is a local cache file `.intentline/index.json` rebuilt by `intentline index`, gitignored, treated as disposable. Do not build the index until a benchmark in CI shows the naive path missing the 100 ms target. YAGNI until then.
 
 ### 4.5 Check
 
-`gitwhy check` (and the optional pre-commit hook):
+`intentline check` (and the optional pre-commit hook):
 
 1. Compute staged diff stat (or the range given, which must be `A..B` or `A...B`).
-2. Leave out files matched by `config.check.ignore` globs (default: lockfiles, generated, `.gitwhy/**`). A pattern without `/` also matches the file name in any directory. Binary files count as zero lines.
+2. Leave out files matched by `config.check.ignore` globs (default: lockfiles, generated, `.intentline/**`). A pattern without `/` also matches the file name in any directory. Binary files count as zero lines.
 3. If the remaining added+deleted lines are `< config.check.min_lines` (default 30), exit 0. This also covers a change made only of ignored files, and keeps a large lockfile from failing a small code change.
-4. If a pending id exists, or HEAD / the commit range already has a `Gitwhy-Id`, exit 0.
+4. If a pending id exists, or HEAD / the commit range already has a `Intentline-Id`, exit 0.
 5. Otherwise exit 3 and print the exact command to capture.
 
 Default install does **not** enable the blocking pre-commit hook. `install-hooks --check` enables it. Teams opt in.
@@ -187,7 +187,7 @@ Default install does **not** enable the blocking pre-commit hook. `install-hooks
 
 - Writes to a record use temp file + atomic rename in the same directory.
 - Ids are UUIDv7, lowercase hex with hyphens, as produced by the standard library (Python 3.12 has no UUIDv7 in stdlib — use a tiny internal implementation or the `uuid6`/`uuid-utils` package; prefer a well-maintained package over hand-rolled bit math. Document the choice in the issue).
-- Schema version is an integer on the record (`schema_version: 1`) and in `.gitwhy/schema-version`. A reader that sees a higher version than it supports exits with a clear "upgrade gitwhy" error. It never guesses.
+- Schema version is an integer on the record (`schema_version: 1`) and in `.intentline/schema-version`. A reader that sees a higher version than it supports exits with a clear "upgrade intentline" error. It never guesses.
 - Config is layered: built-in defaults < user config < project config < flags. Project config wins over user config. Flags win over both.
 
 ## 6. Trade-offs (decided)
@@ -208,13 +208,13 @@ Default install does **not** enable the blocking pre-commit hook. `install-hooks
 | Failure | Behavior |
 |---|---|
 | Not a git repo | Exit 2, message, no files written |
-| `.gitwhy/` missing | `capture` offers to init or exits 2 with the init command. `why` exits 2 |
+| `.intentline/` missing | `capture` offers to init or exits 2 with the init command. `why` exits 2 |
 | Corrupt YAML | Skip with a warning in `list`; `show` exits 4 and prints the path |
 | Trailer id with no file | `why` prints "record missing for id …" and continues |
 | Record file with no commit | `list` shows it as unlinked. `why` can still find it via hunk links |
 | Hook already present and not ours | Refuse to overwrite. Print a snippet. Exit 5 |
 | `core.hooksPath` set | Refuse to write into `.git/hooks`. Print what to append. Exit 5 |
-| Schema newer than binary | Exit 6, "upgrade gitwhy" |
+| Schema newer than binary | Exit 6, "upgrade intentline" |
 | Amend of a pushed commit | Refuse. Exit 7 |
 | Affirm from a non-TTY without `--i-am-human` | Refuse. Exit 8 |
 
@@ -222,7 +222,7 @@ Default install does **not** enable the blocking pre-commit hook. `install-hooks
 
 - `links.adr`: a string path. Rendered if present, not resolved in v1 beyond existence check.
 - `evidence[].command` and `evidence[].exit_code`: stored, not re-run, in v1.
-- Adapters package: Claude Code first. Codex / Cursor adapters are later issues with the same contract — a script that calls `gitwhy capture` with flags. No framework.
+- Adapters package: Claude Code first. Codex / Cursor adapters are later issues with the same contract — a script that calls `intentline capture` with flags. No framework.
 - JSON Schema in `schema/` is the compatibility surface for other tools.
 
 ## 9. Performance budget

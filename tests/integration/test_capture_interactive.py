@@ -1,4 +1,4 @@
-"""Interactive ``gitwhy capture``: the three questions (docs/03 section 4)."""
+"""Interactive ``intentline capture``: the three questions (docs/03 section 4)."""
 
 import json
 import subprocess
@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner, Result
 
-from gitwhy.capture import FALSIFIER_QUESTION, GOAL_QUESTION, REJECTED_QUESTION
-from gitwhy.cli import app
-from gitwhy.models import Record
-from gitwhy.store import RecordStore, initialize
+from intentline.capture import FALSIFIER_QUESTION, GOAL_QUESTION, REJECTED_QUESTION
+from intentline.cli import app
+from intentline.models import Record
+from intentline.store import RecordStore, initialize
 from tests.conftest import plain
 
 runner = CliRunner()
@@ -22,7 +22,7 @@ def repo(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (git_repo / "a.py").write_text("x = 1\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(git_repo), "add", "a.py"], check=True)  # noqa: S603, S607
     monkeypatch.chdir(git_repo)
-    monkeypatch.setattr("gitwhy.cli.stdin_is_tty", lambda: True)
+    monkeypatch.setattr("intentline.cli.stdin_is_tty", lambda: True)
     return git_repo
 
 
@@ -31,7 +31,7 @@ def _run(answers: str, *args: str) -> Result:
 
 
 def _records(repo: Path) -> list[Record]:
-    result = RecordStore(repo / ".gitwhy").list()
+    result = RecordStore(repo / ".intentline").list()
     assert result.errors == []
     return [Record.model_validate(r.model_dump()) for r in result.records]
 
@@ -91,7 +91,7 @@ def test_goal_flag_on_a_terminal_asks_nothing(repo: Path) -> None:
 def test_non_tty_without_goal_exits_1_and_writes_nothing(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("gitwhy.cli.stdin_is_tty", lambda: False)
+    monkeypatch.setattr("intentline.cli.stdin_is_tty", lambda: False)
     result = _run("Would be ignored\n")
     assert result.exit_code == 1
     text = plain(result.output)
@@ -104,7 +104,7 @@ def test_eof_mid_prompt_exits_1_and_writes_nothing(repo: Path) -> None:
     result = _run("A goal\n")  # input ends before the second question is answered
     assert result.exit_code == 1, result.output
     assert _records(repo) == []
-    assert not (repo / ".gitwhy" / "pending").exists()
+    assert not (repo / ".intentline" / "pending").exists()
 
 
 def test_nothing_staged_fails_before_any_question(
