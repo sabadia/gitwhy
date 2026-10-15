@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `whyline schema` prints the record JSON Schema (draft 2020-12); the same schema is committed as `schema/record.schema.json` and a test fails if they drift.
 - Root `--help` lists the exit codes.
 - `whyline init` creates `.whyline/` (config, schema-version, records, and a `.gitignore` for the local pending file) at the repository root. Safe to rerun; `--force` resets only the config and never touches records.
+- Layered config loading: built-in defaults < user config (`$WHYLINE_CONFIG_HOME`, `$XDG_CONFIG_HOME/whyline`, or `~/.config/whyline`) < project `.whyline/config.yml`.
 
 ### Fixed
 

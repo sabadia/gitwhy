@@ -51,6 +51,11 @@ _WRITE = ConfigDict(extra="forbid")
 _READ = ConfigDict(extra="allow")
 
 
+def utc_now() -> datetime:
+    """Return the current time in UTC, truncated to whole seconds (stored as ``…Z``)."""
+    return datetime.now(UTC).replace(microsecond=0)
+
+
 def _to_utc(value: datetime) -> datetime:
     return value.astimezone(UTC)
 

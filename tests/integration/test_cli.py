@@ -1,12 +1,16 @@
 """CLI behaviour: entry point, help, and the exit code contract (docs/03 section 3)."""
 
+import io
+import json
+from pathlib import Path
+
 import pytest
 import typer
 from typer.testing import CliRunner
 
 from tests.conftest import plain
 from whyline import __version__
-from whyline.cli import WhylineGroup, app
+from whyline.cli import WhylineGroup, app, emit_json, open_store, stdin_is_tty
 from whyline.errors import (
     AffirmRefusedError,
     CorruptError,
@@ -111,3 +115,25 @@ def test_exit_code_2_is_reserved_for_no_repo() -> None:
     no_repo = runner.invoke(probe, ["fail", "no-repo"])
     assert usage.exit_code != 2
     assert no_repo.exit_code == 2
+
+
+# --- shared command plumbing -------------------------------------------------------------------
+
+
+def test_open_store_uses_repo_root(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sub = git_repo / "deep"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    root, store = open_store()
+    assert root == git_repo
+    assert store.whyline_dir == git_repo / ".whyline"
+
+
+def test_emit_json_writes_one_document(capsys: pytest.CaptureFixture[str]) -> None:
+    emit_json({"goal": "café", "n": [1]})
+    assert json.loads(capsys.readouterr().out) == {"goal": "café", "n": [1]}
+
+
+def test_stdin_is_tty_reflects_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    assert stdin_is_tty() is False

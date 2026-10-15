@@ -1,5 +1,7 @@
 """Typer command-line interface for whyline."""
 
+import json
+import sys
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -16,7 +18,7 @@ from whyline import __version__
 from whyline.errors import ExitCode, WhylineError
 from whyline.gitio import repo_root
 from whyline.models import render_record_json_schema
-from whyline.store import initialize
+from whyline.store import WHYLINE_DIRNAME, RecordStore, initialize
 
 EXIT_CODES_HELP = (
     "[bold]Exit codes:[/bold] 0 ok, 1 usage, 2 not a git repo or not initialized, "
@@ -63,6 +65,30 @@ class WhylineGroup(TyperGroup):
             raise
         except WhylineError as exc:
             raise _ReportedError(exc) from exc
+
+
+# --- shared command plumbing ----------------------------------------------------------------
+
+JsonOption = Annotated[
+    bool, typer.Option("--json", help="Print one JSON document on stdout. Logs stay on stderr.")
+]
+VerboseOption = Annotated[bool, typer.Option("--verbose", "-v", help="Print more detail.")]
+
+
+def open_store() -> tuple[Path, RecordStore]:
+    """Return the repository root containing the cwd, and the record store inside it."""
+    root = repo_root(Path.cwd())
+    return root, RecordStore(root / WHYLINE_DIRNAME)
+
+
+def emit_json(data: object) -> None:
+    """Write ``data`` to stdout as one indented JSON document."""
+    typer.echo(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def stdin_is_tty() -> bool:
+    """Return True when stdin is an interactive terminal. Tests monkeypatch this."""
+    return sys.stdin.isatty()
 
 
 app = typer.Typer(
