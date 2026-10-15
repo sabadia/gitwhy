@@ -5,22 +5,20 @@ Git-native intent ledger. Capture why a change exists, and get it back when you 
 Code is cheap to write. Understanding it is not.
 The reason for a change dies in a chat or a head.
 Reviewers reverse-engineer a clean diff, and the next session invents a history that was never true.
-Intentline stores a small structured record next to the code, links it to the commit with a `Intentline-Id` trailer, and returns it at a file and line.
+Intentline stores a small structured record next to the code, links it to the commit with an `Intentline-Id` trailer, and returns it at a file and line.
 
-**Status:** v0.1.0. Not on PyPI yet.
+**Status:** v0.1.0 on PyPI.
 
 ## Install
 
-Intentline is not on PyPI yet. Install it from git:
+```sh
+uv tool install intentline
+```
+
+From git:
 
 ```sh
 uv tool install git+https://github.com/sabadia/intentline
-```
-
-After it is published:
-
-```sh
-uv tool install intentline
 ```
 
 The optional MCP extra is `uv tool install 'intentline[mcp]'`. Core commands need no account and no API key.
