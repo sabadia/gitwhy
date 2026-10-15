@@ -9,6 +9,6 @@ One file, copied. Do not fork the text per agent.
 | GitHub | `.github/skills/whyline/SKILL.md` |
 | Claude Code (user) | `~/.claude/skills/whyline/SKILL.md` |
 
-`whyline install-agent` performs the project copies. An agent that can only run a shell does not need the skill file: `whyline why FILE:LINE` and `whyline capture --goal "..." --pending` are enough.
+`whyline install-agent` copies this directory into the three project paths. `--claude` also copies it to `~/.claude/skills/whyline`. An agent that can only run a shell does not need the skill file: `whyline why FILE:LINE` and `whyline capture --goal "..." --pending` are enough.
 
 Per-agent setup lives in `docs/adapters/` in the whyline repository.
