@@ -1,6 +1,7 @@
 """Shared test fixtures."""
 
 import re
+import subprocess
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -79,3 +80,12 @@ def whyline_dir(tmp_path: Path) -> Path:
 def store(whyline_dir: Path) -> RecordStore:
     """A store over an initialized ``.whyline`` directory."""
     return RecordStore(whyline_dir)
+
+
+@pytest.fixture
+def git_repo(tmp_path: Path) -> Path:
+    """A fresh, empty git repository in ``tmp_path / "repo"`` (no commits)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)  # noqa: S603, S607
+    return repo.resolve()
