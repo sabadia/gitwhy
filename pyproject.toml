@@ -50,7 +50,7 @@ packages = ["src/intentline"]
 "templates/AGENTS.intentline.md" = "intentline/bundled/AGENTS.intentline.md"
 
 [tool.hatch.build.targets.sdist]
-exclude = [".claude", ".intentline-dev"]
+exclude = [".claude", ".intentline-dev", "docs/development"]
 
 [tool.ruff]
 line-length = 100

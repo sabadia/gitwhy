@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01a1410d-e04f-7f5a-bd5d-1bf563975b57
+status: draft
+created_at: '2026-10-15T19:33:10Z'
+updated_at: '2026-10-15T19:33:10Z'
+affirmed_at: null
+affirmed_by: null
+author:
+  kind: agent
+  name: null
+  tool: grok
+goal: Publish the user manual in docs and keep maintainer notes out of the repository, so installers do not read the development process.
+constraints: []
+rejected: []
+assumptions: []
+falsifier: ''
+evidence: []
+links:
+- path: README.md
+  start_line: null
+  end_line: null
+- path: docs/README.md
+  start_line: null
+  end_line: null
+- path: .gitignore
+  start_line: null
+  end_line: null
+adr: null
+risks: []
+source:
+  kind: flags
+  ref: null

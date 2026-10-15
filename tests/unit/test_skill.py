@@ -48,7 +48,7 @@ def test_skill_frontmatter_says_when_to_use_it() -> None:
 
 def test_references_hold_the_short_schema_note() -> None:
     schema = (SKILL_DIR / "references" / "schema.md").read_text(encoding="utf-8")
-    assert "docs/03-schema-cli-hooks.md" in schema
+    assert "docs/records.md" in schema
     for field in ("goal", "rejected", "assumptions", "falsifier", "status"):
         assert field in schema
     agents = (SKILL_DIR / "references" / "agents.md").read_text(encoding="utf-8")

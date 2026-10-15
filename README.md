@@ -23,6 +23,8 @@ uv tool install git+https://github.com/sabadia/intentline
 
 The optional MCP extra is `uv tool install 'intentline[mcp]'`. Core commands need no account and no API key.
 
+The manual starts at [docs/getting-started.md](docs/getting-started.md). The full index is [docs/README.md](docs/README.md).
+
 ## Quickstart
 
 ```sh
@@ -46,37 +48,37 @@ intentline why src/app.py:1
 - Git is the bus. Records are YAML in `.intentline/records/`. The link is a commit trailer.
 - Small records. A screen, not an essay.
 
-The product spec is [docs/01-product-spec.md](docs/01-product-spec.md).
-
 ## Limits
 
-- `--amend-head` treats a commit as pushed when any of this clone's remote-tracking refs contain it. That check does not contact the network. On a detached HEAD, capture and link still work; `--amend-head` refuses.
+- `--amend-head` treats a commit as pushed when any of this clone's remote-tracking refs contain it. That check does not contact the network.
 - A shallow clone may miss older records. `intentline why` says so.
-- Intentline uses the repository you are in. Inside a submodule, that is the submodule, not the parent.
-- On a deleted path, `why` may find nothing. `intentline show <id>` still prints the record.
-- In an empty repository, init and capture work. `why` says there are no commits yet and exits 0.
-- Two captures at once: the last write wins, and the ids do not collide.
 - Records are committed with the code. Do not put secrets in goals. Intentline does not scan for them.
+
+The rest, including submodules, deleted paths, and empty repositories: [docs/limits.md](docs/limits.md).
 
 ## Exit codes
 
-`intentline --help` lists them, from 0 ok through 9 not found. The contract is [docs/03-schema-cli-hooks.md](docs/03-schema-cli-hooks.md).
+`intentline --help` lists them, from 0 ok through 9 not found. The table is [docs/exit-codes.md](docs/exit-codes.md).
 
 ## Docs
 
-| Doc | What it is |
+| Guide | What it is |
 |---|---|
-| [CLAUDE.md](CLAUDE.md) | Operating manual for the coding agent |
-| [docs/00-handoff.md](docs/00-handoff.md) | How to start Claude Code on this package |
-| [docs/01-product-spec.md](docs/01-product-spec.md) | Problem, users, scope, metrics |
-| [docs/02-architecture.md](docs/02-architecture.md) | Components, flows, trade-offs |
-| [docs/03-schema-cli-hooks.md](docs/03-schema-cli-hooks.md) | Schema, CLI, hooks, exit codes |
-| [docs/04-roadmap.md](docs/04-roadmap.md) | Phases and issue catalog |
-| [docs/05-quality.md](docs/05-quality.md) | Tests, CI, security, release bar |
-| [docs/06-github-protocol.md](docs/06-github-protocol.md) | Repo, board, catch-up, next-action rules |
-| [docs/07-agent-integrations.md](docs/07-agent-integrations.md) | Skill, MCP, hooks, AGENTS.md — how any coding agent uses Intentline |
-| [docs/adapters/claude-code.md](docs/adapters/claude-code.md) | Claude Code skill, MCP, and Stop hook |
-| [docs/adapters/other-agents.md](docs/adapters/other-agents.md) | Codex, Cursor, Copilot, and the shell fallback |
+| [Getting started](docs/getting-started.md) | First record, first recall |
+| [Installation](docs/installation.md) | PyPI, git, MCP, upgrade |
+| [Records](docs/records.md) | Every field, draft and affirmed |
+| [Capture](docs/capture.md) | Flags, prompts, session logs |
+| [Linking](docs/linking.md) | The trailer and amend |
+| [Recall](docs/recall.md) | `why`, `show`, `list` |
+| [Affirm](docs/affirm.md) | A human confirms a reason |
+| [Check](docs/check.md) | Large changes need a record |
+| [Hooks](docs/hooks.md) | prepare-commit-msg and pre-commit |
+| [Configuration](docs/configuration.md) | Project and user config |
+| [Coding agents](docs/agents.md) | Skill, MCP, install |
+| [Claude Code](docs/adapters/claude-code.md) | Skill, MCP, Stop hook |
+| [Other agents](docs/adapters/other-agents.md) | Codex, Cursor, Copilot, shell |
+| [Troubleshooting](docs/troubleshooting.md) | Exit codes in practice |
+| [Contributing](docs/contributing.md) | Changing this codebase |
 
 ## Use from a coding agent
 

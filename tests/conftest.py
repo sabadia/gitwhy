@@ -27,11 +27,11 @@ def plain(output: str) -> str:
     return " ".join(_BOX.sub(" ", _ANSI.sub("", output)).split())
 
 
-SPEC_PATH = Path(__file__).resolve().parents[1] / "docs" / "03-schema-cli-hooks.md"
+SPEC_PATH = Path(__file__).resolve().parent / "fixtures" / "schema-examples.md"
 
 
 def doc_yaml_block(heading: str) -> str:
-    """Return the first ```yaml block after ``heading`` in docs/03-schema-cli-hooks.md."""
+    """Return the first ```yaml block after ``heading`` in the schema fixture."""
     text = SPEC_PATH.read_text(encoding="utf-8")
     match = re.search(r"```yaml\n(.*?)```", text[text.index(heading) :], re.DOTALL)
     assert match, f"no yaml block after {heading!r}"
