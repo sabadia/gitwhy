@@ -60,7 +60,8 @@ def _rewrite(text: str, source: str) -> str:
         page = PAGES.get(rel)
         if page is None:
             return match.group(0)
-        return f"]({page}{anchor})"
+        # Wiki pages render at /wiki/Name. A link to Name.md is the raw file.
+        return f"]({page.removesuffix('.md')}{anchor})"
 
     return LINK.sub(replace, text)
 
@@ -71,7 +72,7 @@ def _sidebar() -> str:
         if source == "README.md":
             continue
         title = page.removesuffix(".md").replace("-", " ")
-        lines.append(f"- [{title}]({page})")
+        lines.append(f"- [{title}]({page.removesuffix('.md')})")
     lines.append("")
     return "\n".join(lines)
 
