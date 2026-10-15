@@ -395,6 +395,11 @@ def _ensure_gitignore_lists_pending(result: InitResult, path: Path) -> None:
     result.updated.append(path)
 
 
+def atomic_write_text(target: Path, text: str) -> None:
+    """Write ``text`` to ``target`` atomically (temp file in the same directory, then rename)."""
+    _atomic_write(target, text)
+
+
 def _atomic_write(target: Path, text: str) -> None:
     tmp = target.with_name(f".{target.name}.{secrets.token_hex(6)}.tmp")
     # os.open with 0o666 lets the umask decide permissions, like a normal file write.

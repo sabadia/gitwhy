@@ -16,7 +16,9 @@ from whyline.models import Config
 from whyline.store import (
     CONFIG_FILENAME,
     WHYLINE_DIRNAME,
+    atomic_write_text,
     describe_validation_error,
+    dump_yaml,
     ensure_supported_schema,
 )
 
@@ -94,3 +96,26 @@ def _deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[st
         else:
             merged[key] = value
     return merged
+
+
+def enable_hook_check(repo_root: Path) -> bool:
+    """Set ``hooks.check: true`` in the project config. Returns False if it already was.
+
+    When the file has no ``hooks`` section, one is appended so existing comments survive.
+    Otherwise the file is rewritten from its parsed content, which drops comments.
+    """
+    path = project_config_path(repo_root)
+    data = read_config_file(path, label="Project config")
+    hooks = data.get("hooks")
+    if isinstance(hooks, dict) and hooks.get("check") is True:
+        return False
+    if hooks is None:
+        current = path.read_text(encoding="utf-8") if path.exists() else ""
+        separator = "" if not current or current.endswith("\n") else "\n"
+        text = f"{current}{separator}hooks:\n  check: true\n"
+    else:
+        data["hooks"] = {**(hooks or {}), "check": True}
+        text = dump_yaml(data)
+    Config.model_validate(yaml.safe_load(text) or {})
+    atomic_write_text(path, text)
+    return True
