@@ -1,5 +1,6 @@
 {
   "name": "whyline",
+  "version": "0.1.0",
   "description": "Drafts one Whyline record when a Claude Code session stops. It does not affirm. Install the skill separately with whyline install-agent.",
   "author": {
     "name": "Mahamudul Hasan"

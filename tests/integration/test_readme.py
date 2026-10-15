@@ -19,7 +19,7 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 VENV_BIN = str(Path(sys.executable).parent)
 
 _REQUIRED = (
-    "pre-release, MVP in progress",
+    "v0.1.0",
     "git+https://github.com/sabadia/whyline",
     "uv tool install whyline",
     "whyline init",
