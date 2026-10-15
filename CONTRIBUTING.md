@@ -21,6 +21,10 @@ uv run mypy
 uv run pytest
 ```
 
+Tooling: uv, hatchling (build backend), ruff (lint and format, line length 100), mypy in strict mode
+with the Pydantic plugin, pytest. ty was evaluated and is still pre-1.0 beta, so mypy is the type
+checker until ty is production-ready.
+
 ## Branches and issues
 
 - One issue per branch. Branch name: `type/short-slug`.
