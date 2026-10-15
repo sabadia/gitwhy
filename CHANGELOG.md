@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Usage errors (unknown command or option, missing argument) exit 1 instead of 2, so exit 2 means only "not a git repo or not initialized".
+- `whyline init` no longer writes every default into `.whyline/config.yml`, which made the project config silently override all user config. It now sets only `schema_version` and lists the defaults as comments.
 
 ### Changed
 
