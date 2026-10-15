@@ -320,3 +320,10 @@ def test_config_default_ignore_lists_are_independent() -> None:
 def test_invalid_config_is_rejected(data: dict[str, Any]) -> None:
     with pytest.raises(ValidationError):
         Config.model_validate(data)
+
+
+def test_boolean_schema_version_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="schema_version must be an integer"):
+        Record.model_validate(_record(schema_version=True))
+    with pytest.raises(ValidationError, match="schema_version must be an integer"):
+        Config.model_validate({"schema_version": True})

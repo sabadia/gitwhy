@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Record and config models (`whyline.models`) matching the schema v1 contract: UUIDv7 ids, UTC timestamps, draft/affirmed consistency, repo-relative link paths, and a writer/reader split that keeps unknown keys on read.
 - Typed error hierarchy with the stable exit codes from the spec (`whyline.errors`).
 - Atomic record store (`whyline.store.RecordStore`): save, load, and list under `.whyline/records`; temp file + rename; corrupt files fail cleanly with the path and a next step.
+- Schema version gate: a record or a `.whyline/schema-version` newer than this whyline is refused with exit code 6 and an upgrade hint, never guessed at.
 
 ### Changed
 

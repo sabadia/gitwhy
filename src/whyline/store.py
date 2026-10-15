@@ -11,12 +11,22 @@ from uuid import UUID
 import yaml
 from pydantic import ValidationError
 
-from whyline.errors import CorruptError, NoRepoError, NotFoundError, UsageError, WhylineError
-from whyline.models import Record, StoredRecord
+from whyline.errors import (
+    CorruptError,
+    NoRepoError,
+    NotFoundError,
+    SchemaVersionError,
+    UsageError,
+    WhylineError,
+)
+from whyline.models import SCHEMA_VERSION, Record, StoredRecord
 
 WHYLINE_DIRNAME = ".whyline"
 RECORDS_DIRNAME = "records"
 RECORD_SUFFIX = ".yml"
+SCHEMA_VERSION_FILENAME = "schema-version"
+
+UPGRADE_HINT = "Upgrade whyline (for example `uv tool upgrade whyline`) and run the command again."
 
 _YAML_WIDTH = 4096
 """Wide enough that a 500-character goal stays on one line, which keeps diffs readable."""
@@ -52,6 +62,21 @@ def describe_validation_error(error: ValidationError, *, limit: int = 3) -> str:
     if remaining > 0:
         parts.append(f"and {remaining} more")
     return "; ".join(parts)
+
+
+def ensure_supported_schema(version: object, source: str) -> None:
+    """Raise ``SchemaVersionError`` if ``version`` is newer than this whyline supports.
+
+    Only integers are gated here. Any other value is left to model validation, which reports it
+    as corrupt. A newer file is never guessed at: its fields may mean something this version
+    does not know.
+    """
+    if isinstance(version, int) and not isinstance(version, bool) and version > SCHEMA_VERSION:
+        raise SchemaVersionError(
+            f"{source} uses schema version {version}, but this whyline supports only up to "
+            f"version {SCHEMA_VERSION}.",
+            hint=UPGRADE_HINT,
+        )
 
 
 def parse_record_id(record_id: UUID | str) -> UUID:
@@ -137,6 +162,7 @@ class RecordStore:
             ) from exc
         if not isinstance(data, dict):
             raise CorruptError(f"Record file {shown} is not a YAML mapping.", hint=_FIX_HINT)
+        ensure_supported_schema(data.get("schema_version"), f"Record file {shown}")
         try:
             record = StoredRecord.model_validate(data)
         except ValidationError as exc:
@@ -158,6 +184,27 @@ class RecordStore:
                 f"Whyline is not initialized here ({self._display(self.records_dir)} is missing).",
                 hint="Run `whyline init`.",
             )
+        self._check_repo_schema_version()
+
+    def _check_repo_schema_version(self) -> None:
+        """Gate on ``.whyline/schema-version``. A missing file is treated as version 1."""
+        path = self.whyline_dir / SCHEMA_VERSION_FILENAME
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return
+        except (OSError, UnicodeDecodeError) as exc:
+            raise CorruptError(
+                f"Cannot read {self._display(path)}: {exc}.", hint="Run `whyline init --force`."
+            ) from exc
+        try:
+            version = int(text)
+        except ValueError:
+            raise CorruptError(
+                f"{self._display(path)} should contain a schema version number, got {text!r}.",
+                hint="Run `whyline init --force`.",
+            ) from None
+        ensure_supported_schema(version, f"This repository ({self._display(path)})")
 
     def _display(self, path: Path) -> str:
         try:
